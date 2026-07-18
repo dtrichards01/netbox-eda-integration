@@ -1,0 +1,9 @@
+apiVersion: netbox.eda.nokia.com/v1alpha1
+kind: ApplyTopology
+metadata:
+  name: import-fabric-dc2
+  namespace: fabric-dc2
+spec:
+  instanceName: netbox
+  siteName: fabric-dc2
+  deviceTags: []

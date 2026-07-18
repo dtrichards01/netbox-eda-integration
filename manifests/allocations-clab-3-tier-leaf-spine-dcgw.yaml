@@ -1,0 +1,55 @@
+apiVersion: netbox.eda.nokia.com/v1alpha1
+kind: Allocation
+metadata:
+  name: nb-clab3tier-systemip
+  namespace: clab-3-tier-leaf-spine-dcgw
+spec:
+  enabled: true
+  instance: netbox
+  tags: [eda-clab3tier-systemip]
+  type: ip-address
+---
+apiVersion: netbox.eda.nokia.com/v1alpha1
+kind: Allocation
+metadata:
+  name: nb-clab3tier-mgmt
+  namespace: clab-3-tier-leaf-spine-dcgw
+spec:
+  enabled: true
+  instance: netbox
+  tags: [eda-clab3tier-mgmt]
+  type: ip-in-subnet
+---
+apiVersion: netbox.eda.nokia.com/v1alpha1
+kind: Allocation
+metadata:
+  name: nb-clab3tier-isl
+  namespace: clab-3-tier-leaf-spine-dcgw
+spec:
+  enabled: true
+  instance: netbox
+  tags: [eda-clab3tier-isl]
+  type: subnet
+  subnetLength: 30
+---
+apiVersion: netbox.eda.nokia.com/v1alpha1
+kind: Allocation
+metadata:
+  name: nb-clab3tier-asn-pool
+  namespace: clab-3-tier-leaf-spine-dcgw
+spec:
+  enabled: true
+  instance: netbox
+  tags: [eda-clab3tier-asn]
+  type: asn
+---
+apiVersion: netbox.eda.nokia.com/v1alpha1
+kind: Allocation
+metadata:
+  name: nb-clab3tier-vlan-pool
+  namespace: clab-3-tier-leaf-spine-dcgw
+spec:
+  enabled: true
+  instance: netbox
+  tags: [eda-clab3tier-vlan]
+  type: vlan

@@ -1,0 +1,55 @@
+apiVersion: netbox.eda.nokia.com/v1alpha1
+kind: Allocation
+metadata:
+  name: nb-fabric-dc2-systemip
+  namespace: fabric-dc2
+spec:
+  enabled: true
+  instance: netbox
+  tags: [eda-fabric-dc2-systemip]
+  type: ip-address
+---
+apiVersion: netbox.eda.nokia.com/v1alpha1
+kind: Allocation
+metadata:
+  name: nb-fabric-dc2-mgmt
+  namespace: fabric-dc2
+spec:
+  enabled: true
+  instance: netbox
+  tags: [eda-fabric-dc2-mgmt]
+  type: ip-in-subnet
+---
+apiVersion: netbox.eda.nokia.com/v1alpha1
+kind: Allocation
+metadata:
+  name: nb-fabric-dc2-isl
+  namespace: fabric-dc2
+spec:
+  enabled: true
+  instance: netbox
+  tags: [eda-fabric-dc2-isl]
+  type: subnet
+  subnetLength: 30
+---
+apiVersion: netbox.eda.nokia.com/v1alpha1
+kind: Allocation
+metadata:
+  name: nb-fabric-dc2-asn-pool
+  namespace: fabric-dc2
+spec:
+  enabled: true
+  instance: netbox
+  tags: [eda-fabric-dc2-asn]
+  type: asn
+---
+apiVersion: netbox.eda.nokia.com/v1alpha1
+kind: Allocation
+metadata:
+  name: nb-fabric-dc2-vlan-pool
+  namespace: fabric-dc2
+spec:
+  enabled: true
+  instance: netbox
+  tags: [eda-fabric-dc2-vlan]
+  type: vlan

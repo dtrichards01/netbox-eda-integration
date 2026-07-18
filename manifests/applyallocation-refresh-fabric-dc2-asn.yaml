@@ -1,0 +1,7 @@
+apiVersion: netbox.eda.nokia.com/v1alpha1
+kind: ApplyAllocation
+metadata:
+  name: refresh-fabric-dc2-asn
+  namespace: fabric-dc2
+spec:
+  allocation: nb-fabric-dc2-asn-pool

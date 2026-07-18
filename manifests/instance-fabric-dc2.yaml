@@ -1,0 +1,11 @@
+apiVersion: netbox.eda.nokia.com/v1alpha1
+kind: Instance
+metadata:
+  name: netbox
+  namespace: fabric-dc2
+spec:
+  url: http://netbox.netbox.svc.cluster.local:80
+  apiToken: netbox-api-token
+  signatureKey: netbox-webhook-signature
+  sync:
+    enabled: false
