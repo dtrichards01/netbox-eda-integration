@@ -530,7 +530,7 @@ Allocation pool tags and `Allocation` CRs are in [§6](#6-allocations--ipam-pool
 
 **Baseline fabric:** `clab-3-tier-leaf-spine-dcgw`. Apply **secrets YAML first**, then **Instance YAML** — same EDA namespace.
 
-> **Multi-line YAML:** Each `yaml` code block below is a complete file with line breaks and indentation. If you see everything on one line, open the lab file directly: `./manifests\instance-clab-3-tier-leaf-spine-dcgw.yaml` (or use the canvas — it now renders YAML in a `<pre>` block, not inline code).
+> **Multi-line YAML:** Each `yaml` code block below is a complete file with line breaks and indentation. If you see everything on one line, open the lab file directly: `C:\Users\darrenri\AppData\Local\Temp\instance-clab-3-tier-leaf-spine-dcgw.yaml` (or use the canvas — it now renders YAML in a `<pre>` block, not inline code).
 
 **Credentials** — edit `stringData` in the secrets file before apply:
 
@@ -3050,7 +3050,7 @@ kubectl apply -f /tmp/planned-fabric-eda.yaml
 **Kubernetes manifests** (primary — edit `stringData`, then `kubectl apply -f`):
 
 ```
-./manifests\
+C:\Users\darrenri\AppData\Local\Temp\
   eda-namespace-fabric-dc2.yaml              # Mode B — step 1 (EDA Namespace CR)
   secrets-clab-3-tier-leaf-spine-dcgw.yaml      # baseline Mode A
   instance-clab-3-tier-leaf-spine-dcgw.yaml
@@ -3063,7 +3063,7 @@ kubectl apply -f /tmp/planned-fabric-eda.yaml
 **Helper scripts** (catalog seed, Mode B tests, cleanup) — **full source for primary scripts in [Appendix E](#appendix-e--netbox-django-shell-scripts-full-source)**:
 
 ```
-./manifests\
+C:\Users\darrenri\AppData\Local\Temp\
   nb-seed-eda-catalog.py
   nb-run-seed-catalog.sh
   nb-fix-platforms.py
