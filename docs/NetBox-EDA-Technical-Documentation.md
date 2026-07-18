@@ -8,7 +8,7 @@
 | **Date** | 2026-07-17 |
 | **Environment** | `kind-eda-demo-wsl2`, NetBox `http://localhost:8081`, EDA `https://localhost:9443` |
 
-> **Canonical file:** `./scripts\NetBox-EDA-Technical-Documentation.md` — do not use older copies under `AppData\Local\Temp\`.
+> **Canonical file:** `docs/NetBox-EDA-Technical-Documentation.md` in this repository.
 
 ### Revision history
 
@@ -530,7 +530,7 @@ Allocation pool tags and `Allocation` CRs are in [§6](#6-allocations--ipam-pool
 
 **Baseline fabric:** `clab-3-tier-leaf-spine-dcgw`. Apply **secrets YAML first**, then **Instance YAML** — same EDA namespace.
 
-> **Multi-line YAML:** Each `yaml` code block below is a complete file with line breaks and indentation. If you see everything on one line, open the lab file directly: `C:\Users\darrenri\AppData\Local\Temp\instance-clab-3-tier-leaf-spine-dcgw.yaml` (or use the canvas — it now renders YAML in a `<pre>` block, not inline code).
+> **Multi-line YAML:** Each `yaml` code block below is a complete file with line breaks and indentation. Save manifests under `manifests/` in this repository (see `manifests/*.yaml.example` for secrets).
 
 **Credentials** — edit `stringData` in the secrets file before apply:
 
@@ -999,7 +999,7 @@ Django ORM script executed **inside the NetBox pod** (`manage.py shell`). Create
 
 #### 5.5.2 Prepare the script
 
-Full source: [Appendix E.2](#e2-nb-test-fabric-dc2py-mode-b). Copy to `AppData\Local\Temp\nb-test-fabric-dc2.py` and **edit `NODE_PROFILE`** to match [§5.2](#52-eda-namespace--bootstrap-fabric-dc2) bootstrap:
+Full source: [Appendix E.2](#e2-nb-test-fabric-dc2py-mode-b). Copy `scripts/nb-test-fabric-dc2.py` and **edit `NODE_PROFILE`** to match [§5.2](#52-eda-namespace--bootstrap-fabric-dc2) bootstrap:
 
 ```bash
 kubectl get nodeprofiles -n fabric-dc2 -o jsonpath='{.items[0].metadata.name}{"\n"}'
@@ -2218,7 +2218,7 @@ The script uses `get_or_create()` so it is **idempotent** — safe to re-run aft
 
 #### Script source
 
-Full source: [Appendix E.1](#e1-nb-seed-eda-catalogpy-mode-a). Copy to `AppData\Local\Temp\nb-seed-eda-catalog.py`. Adjust `FABRIC_TENANCY`, `DEVICE_TYPES`, and `ROLES` for your fabrics before running.
+Full source: [Appendix E.1](#e1-nb-seed-eda-catalogpy-mode-a). Use `scripts/nb-seed-eda-catalog.py`. Adjust `FABRIC_TENANCY`, `DEVICE_TYPES`, and `ROLES` for your fabrics before running.
 
 **Catalog scope:** Seeds **36** device types by default (6 lab + 30 extended Nokia SKUs). Set `DEVICE_TYPES = LAB_DEVICE_TYPES` in the script for lab-only. Full model/u_height list in [§4.1.1](#411-mode-a--netbox-catalog-prerequisites-before-sync).
 
@@ -2460,7 +2460,7 @@ kubectl get topolinks -n clab-srl-leaf-spine-dcgw --no-headers | wc -l
 
 ##### 10.8.1.2 Seed NetBox catalog
 
-**Full script:** [Appendix E.1](#e1-nb-seed-eda-catalogpy-mode-a) — save entire block to `./scripts\nb-seed-eda-catalog.py` (or `AppData\Local\Temp\`). Review `FABRIC_TENANCY`, `DEVICE_TYPES`, and `ROLES` before running.
+**Full script:** [Appendix E.1](#e1-nb-seed-eda-catalogpy-mode-a) — use `scripts/nb-seed-eda-catalog.py`. Review `FABRIC_TENANCY`, `DEVICE_TYPES`, and `ROLES` before running.
 
 **Then run (WSL):**
 
@@ -3050,7 +3050,7 @@ kubectl apply -f /tmp/planned-fabric-eda.yaml
 **Kubernetes manifests** (primary — edit `stringData`, then `kubectl apply -f`):
 
 ```
-C:\Users\darrenri\AppData\Local\Temp\
+./manifests/
   eda-namespace-fabric-dc2.yaml              # Mode B — step 1 (EDA Namespace CR)
   secrets-clab-3-tier-leaf-spine-dcgw.yaml      # baseline Mode A
   instance-clab-3-tier-leaf-spine-dcgw.yaml
@@ -3063,7 +3063,7 @@ C:\Users\darrenri\AppData\Local\Temp\
 **Helper scripts** (catalog seed, Mode B tests, cleanup) — **full source for primary scripts in [Appendix E](#appendix-e--netbox-django-shell-scripts-full-source)**:
 
 ```
-C:\Users\darrenri\AppData\Local\Temp\
+./manifests/
   nb-seed-eda-catalog.py
   nb-run-seed-catalog.sh
   nb-fix-platforms.py
@@ -3078,7 +3078,7 @@ C:\Users\darrenri\AppData\Local\Temp\
 
 ### Appendix D — Example Kubernetes manifest files
 
-Save these from §4.4 / §5 / §9 YAML blocks (or use lab copies in `AppData\Local\Temp\`). Pattern: **edit YAML → `kubectl apply -f <file>`**.
+Save manifests from §4.4 / §5 / §9 YAML blocks (or use copies in `manifests/`). Pattern: **edit YAML → `kubectl apply -f <file>`**.
 
 | File | Kind(s) | Namespace (lab) | Section |
 |------|---------|-----------------|---------|

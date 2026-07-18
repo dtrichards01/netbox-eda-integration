@@ -8,6 +8,10 @@ Technical documentation and lab scripts for integrating **Nokia Event-Driven Aut
 2. Copy `manifests/secrets-*.yaml.example` → remove `.example`, fill in secrets
 3. Run scripts from WSL against your EDA cluster + NetBox pod
 
+**Mode B end-to-end:** `bash scripts/run-mode-b-fabric-dc2.sh`  
+Set `NETBOX_API_TOKEN` if you do not have a Mode A namespace to copy the API token from.  
+Set `FABRIC_DC2_WEBHOOK_SECRET` to match your NetBox webhook signing secret.
+
 ## Layout
 
 | Path | Contents |
