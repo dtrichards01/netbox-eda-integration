@@ -1,114 +1,126 @@
-# NetBox ↔ EDA Technical Documentation
+# NetBox ↔ EDA Integration
 
-| Field | Value |
-|-------|-------|
+## Technical Design and Implementation Guide
+
+| | |
+|---|---|
 | **Document ID** | NETBOX-EDA-TD-001 |
-| **Version** | 1.47 |
+| **Version** | 2.0 |
 | **Status** | Draft |
-| **Date** | 2026-07-17 |
-| **Environment** | `kind-eda-demo-wsl2`, NetBox `http://localhost:8081`, EDA `https://localhost:9443` |
+| **Classification** | Public — Integration guide |
+| **Last updated** | 2026-07-18 |
+| **Repository** | `netbox-eda-integration` |
 
-> **Canonical file:** `docs/NetBox-EDA-Technical-Documentation.md` in this repository.
+| Environment (lab) | Value |
+|-------------------|-------|
+| Kubernetes cluster | `kind-eda-demo-wsl2` |
+| NetBox UI | `http://localhost:8081` |
+| EDA UI | `https://localhost:9443` |
+| Mode A namespace | `clab-3-tier-leaf-spine-dcgw` |
+| Mode B namespace | `fabric-dc2` |
 
-### Revision history
-
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | 2026-07-16 | Lab documentation | Consolidated report + import guide; standard technical structure |
-| 1.1 | 2026-07-16 | Lab documentation | Mode A catalog prep procedure; `nb-seed-eda-catalog.py` |
-| 1.2 | 2026-07-17 | Lab documentation | §9.8 manual test guide with example CRs and scripts |
-| 1.3 | 2026-07-17 | Lab documentation | Canvas linear layout; multi-namespace secrets (§7); enable checklist (§8) |
-| 1.4 | 2026-07-17 | Lab documentation | EDAManaged expanded (§4.4); namespace bootstrap corrected (label on namespace) |
-| 1.5 | 2026-07-17 | Lab documentation | Operating modes clarified (ApplyTopology workflow, DCIM perms, orphans); catalog script shown before run; roles/EDAManaged explained |
-| 1.6 | 2026-07-17 | Lab documentation | Nokia hardware catalog expanded from datasheets (u_height); D4/X1B corrections |
-| 1.7 | 2026-07-17 | Lab documentation | Full `EXTENDED_DEVICE_TYPES` table added to §4.1.1; header/canvas version synced to revision history |
-| 1.8 | 2026-07-17 | Lab documentation | Instance CR + NetBox tag prerequisites (§4.4); EDAManaged/allocation/device tags clarified |
-| 1.9 | 2026-07-17 | Lab documentation | Region/Tenant convention: `region-1`/`tenant-a` (first fabric), `region-2`/`tenant-b` (second) |
-| 1.10 | 2026-07-17 | Lab documentation | Full inline YAML manifests paired with every `kubectl apply` example |
-| 1.11 | 2026-07-17 | Lab documentation | Fixed catalog seed kubectl commands (WSL + PowerShell; no broken line continuations) |
-| 1.12 | 2026-07-17 | Lab documentation | Catalog seed: NetBox 4.x imports, full Nokia catalog (36 SKUs), stdin shell redirect (avoids OOM), X1B/X3B lab platforms |
-| 1.13 | 2026-07-17 | Lab documentation | Paste-safe catalog seed commands (no jsonpath/bash -c nesting); `nb-run-seed-catalog.sh` wrapper |
-| 1.14 | 2026-07-17 | Lab documentation | §8.2 — shared NetBox API token across namespaces; per-namespace webhook secrets |
-| 1.15 | 2026-07-17 | Lab documentation | Section numbering aligned: §3.1, §9.0–8.11, §10.8.0–9.8.4; TOC and cross-refs updated |
-| 1.16 | 2026-07-17 | Lab documentation | §4.4 NetBox Instance YAML cleaned; kubectl apply blocks; canvas prose de-bracketed |
-| 1.17 | 2026-07-17 | Lab documentation | NetBox Instance apply via heredoc — no YAML file required |
-| 1.18 | 2026-07-17 | Lab documentation | NetBox Instance one-liner + `nb-apply-instance-clab.sh` for collapsed paste |
-| 1.19 | 2026-07-17 | Lab documentation | `clab-3-tier-leaf-spine-dcgw` Instance script; removed fragile one-liner; YAML indent troubleshooting |
-| 1.20 | 2026-07-17 | Lab documentation | Baseline `clab-3-tier` = region-1/tenant-a; secrets-from-NetBox + embedded Instance YAML in §4.4 |
-| 1.21 | 2026-07-17 | Lab documentation | §4.4 heredoc paste format — `>` prompt, line breaks, wrapper scripts; secrets + Instance step checklist |
-| 1.22 | 2026-07-17 | Lab documentation | §4.4 one-block Mode A apply (`nb-mode-a-baseline.sh`); heredoc steps in collapsible section |
-| 1.23 | 2026-07-17 | Lab documentation | §4.4 two paste-safe single blocks + explicit warning: heredoc/base64 cannot run as one line |
-| 1.24 | 2026-07-17 | Lab documentation | §4.4 YAML file workflow — secrets + Instance manifests, `kubectl apply -f`; lab files in Temp |
-| 1.25 | 2026-07-17 | Lab documentation | §4.4 YAML blocks match file format — `#` header comments inside fenced blocks |
-| 1.26 | 2026-07-17 | Lab documentation | Full doc sync: §4.4 second-fabric YAML; §9.1/8.2/§9.8 baseline namespace; Appendix C split |
-| 1.27 | 2026-07-17 | Lab documentation | §4.4 restructured — filename headings, YAML-only fences, one source of truth |
-| 1.28 | 2026-07-17 | Lab documentation | Canvas YAML uses preformatted blocks; §4.4 note on multi-line display |
-| 1.29 | 2026-07-17 | Lab documentation | §5 Mode B DCIM import (build path); allocations renumbered to §6; §4 Mode A only through §4.4 |
-| 1.30 | 2026-07-17 | Lab documentation | Canonical path note; Temp copy synced; TOC labels §5 Mode B / §6 Allocations |
-| 1.31 | 2026-07-17 | Lab documentation | §5.4 nb-test-fabric-dc2.py — 4× D3L leaf, 2× D4 spine, 8 ISL cables |
-| 1.32 | 2026-07-17 | Lab documentation | §5.3 namespace + bootstrap (fabric-dc2); §5.4–5.6 renumbered |
-| 1.33 | 2026-07-17 | Lab documentation | §5.3 EDA `core.eda.nokia.com/v1` Namespace CR (UI method) + `edactl` bootstrap |
-| 1.34 | 2026-07-17 | Lab documentation | §5.3 simplified — EDA Namespace CR + edactl only; removed K8s label fallback |
-| 1.35 | 2026-07-17 | Lab documentation | §5.5 full nb-test-fabric-dc2.py + how-it-works; §9.6 manual onboarding YAML removed |
-| 1.36 | 2026-07-17 | Lab documentation | §5.4 NetBox prerequisites (region/tenant/site/webhook) before EDA secrets; §5.5–5.7 renumbered |
-| 1.37 | 2026-07-17 | Lab documentation | §5.4 numbered subsections (NetBox UI); §5.6.2 script run commands before full source |
-| 1.38 | 2026-07-17 | Lab documentation | §5.2/§5.3 build order + empty-bootstrap troubleshooting; §5.6 anchor fixes; TOC Mode B subsections; §9.10 Mode B path |
-| 1.39 | 2026-07-17 | Lab documentation | §5.6.2 full script before §5.6.3 run commands; `nb-test-fabric-dc2.py` in Appendix D; canvas embeds script |
-| 1.40 | 2026-07-17 | Lab documentation | Appendix E — full `nb-seed-eda-catalog.py` + `nb-test-fabric-dc2.py`; §5.6 / §10.0 reference appendix only |
-| 1.41 | 2026-07-17 | Lab documentation | Scripts quick reference at top; full appendix TOC; canvas Appendix E section |
-| 1.42 | 2026-07-17 | Lab documentation | §5 numbering/TOC fixed (5.1–5.7, 5.5.x); §6.4 all allocation examples + NetBox tags; fabric-dc2 tag names aligned |
-| 1.43 | 2026-07-17 | Lab documentation | Quick navigation banner; §6 TOC expanded (6.1–6.4); open-this-file callout |
-| 1.44 | 2026-07-17 | Lab documentation | §5 renumbered — step N = §5.N (5.2 bootstrap … 5.7 allocations); expanded §5.3 NetBox prerequisites; full §5.7 allocation examples |
-| 1.45 | 2026-07-17 | Lab documentation | Appendix E expanded — **full** source for all lab scripts (E.1–E.7); §10.8 partial snippets replaced with E.x pointers |
-| 1.46 | 2026-07-18 | Lab documentation | §5.5/Appendix E.2 — device tag `site=fabric-dc2` (not `eda.nokia.com/source=netbox`); cable type `cat6`; ApplyTopology troubleshooting for forbidden source label and invalid `mmr` CableType |
-| 1.47 | 2026-07-18 | Lab documentation | Mode A clab allocations (`eda-clab3tier-*`, `allocations-clab-3-tier-leaf-spine-dcgw.yaml`); §6.3 ASN/sync gate documented; §8.1 tag table + verify/setup scripts |
+**Canonical path:** `docs/NetBox-EDA-Technical-Documentation.md` in this repository.  
+**Change log:** [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
-> **v1.47 — open this exact file:** `./scripts\NetBox-EDA-Technical-Documentation.md`  
-> **Not** the Cursor canvas (summary only). **Reload the editor tab** (close/reopen) if you still see v1.46 or older.  
-> **Verify:** header shows **1.47** · Mode A clab allocations · §6.3 ASN/sync gate · Appendix **E.1–E.8** = complete scripts.
+## Executive summary
+
+Nokia Event-Driven Automation (EDA) integrates with NetBox through the **EDA NetBox application**, supporting two topology operating models and a decoupled **IPAM allocation** path:
+
+| Model | Direction | `sync.enabled` | Primary use |
+|-------|-----------|----------------|-------------|
+| **Mode A** — EDA-managed | EDA → NetBox DCIM mirror | `true` | Containerlab / live fabric; NetBox reflects deployed topology |
+| **Mode B** — NetBox-managed | NetBox → EDA via `ApplyTopology` | `false` | Planned / greenfield design; NetBox is DCIM source of truth |
+| **Allocations** (either mode) | NetBox tagged pools → EDA pools → consumed values back to NetBox | n/a | VLAN, ASN, system IP, management IP, ISL subnets |
+
+**Design rule:** one EDA Kubernetes namespace = one fabric context = one `Instance` CR + one dedicated webhook URL.
+
+This guide covers architecture, prerequisites, step-by-step procedures, Kubernetes manifests, NetBox Django scripts, and lab-validated constraints (including known gaps such as Mode B ASN allocation).
 
 ---
 
-> **OPEN THIS FILE:** `./scripts\NetBox-EDA-Technical-Documentation.md` — **not** the Cursor canvas. Header must show **Version 1.47**.
+## Document conventions
 
-### Quick navigation (latest)
+| Convention | Meaning |
+|------------|---------|
+| **§N** / **§N.M** | Section references (e.g. §5.3 = NetBox prerequisites for Mode B) |
+| **Mode A / Mode B** | EDA-managed sync vs NetBox-managed import — see §4 and §5 |
+| **EDAManaged** | NetBox tag marking objects created or claimed by EDA |
+| **kubectl** | Run from **WSL** against the lab cluster unless noted |
+| **Scripts** | `./scripts/` relative to this repo root |
+| **Manifests** | `./manifests/` — Kubernetes YAML and secret templates |
+| **Pass criteria** | Explicit checks after each procedure block |
 
-| Topic | Jump to |
-|-------|---------|
-| Mode B build order (§5.1–5.7) | [§5.1 Overview + build order](#51-overview) |
-| NetBox prerequisites (Mode B) | [§5.3](#53-netbox-prerequisites-fabric-dc2) |
-| All 5 allocation pools + NetBox tags | [§5.7](#57-netbox-allocation-pools-fabric-dc2) |
-| Scripts (catalog, DCIM, allocations) | [Scripts table](#scripts--where-to-find-them) · [Appendix E](#appendix-e--netbox-django-shell-scripts-full-source) |
-| Hands-on allocations test | [§10.8.3](#1083-test-allocations-optional) |
-
----
-
-### Scripts — where to find them
-
-**Full Python source is in [Appendix E](#appendix-e--netbox-django-shell-scripts-full-source)** (§13, near end of this file — search for `Appendix E` or `#### E.1`).
-
-| Script | Appendix | Mode | Lab file |
-|--------|----------|------|----------|
-| `nb-seed-eda-catalog.py` | [E.1](#e1-nb-seed-eda-catalogpy-mode-a) | A — catalog seed | `./scripts\nb-seed-eda-catalog.py` |
-| `nb-test-fabric-dc2.py` | [E.2](#e2-nb-test-fabric-dc2py-mode-b) | B — DCIM fabric | `./scripts\nb-test-fabric-dc2.py` |
-| `nb-test-allocation-pools-fabric-dc2.py` | [E.3](#e3-nb-test-allocation-pools-fabric-dc2py) | Allocations — fabric-dc2 (5 pools) | `./scripts\nb-test-allocation-pools-fabric-dc2.py` |
-| `nb-test-allocation-pools-clab3tier.py` | [E.8](#e8-nb-test-allocation-pools-clab3tierpy) | Allocations — clab Mode A (5 pools) | `./scripts\nb-test-allocation-pools-clab3tier.py` |
-| `nb-fix-platforms.py` | [E.4](#e4-nb-fix-platformspy) | Mode A post-sync platform fix | `./scripts\nb-fix-platforms.py` |
-| `nb-run-seed-catalog.sh` | [E.7](#e7-nb-run-seed-catalogsh) | Wrapper — catalog seed stdin | `./scripts\nb-run-seed-catalog.sh` |
-| `setup-allocations-both-namespaces.sh` | — | Create pools + apply Allocation CRs (both fabrics) | `./scripts\setup-allocations-both-namespaces.sh` |
-| `verify-allocations-both.sh` | — | Verify Allocation status + EDA pools | `./scripts\verify-allocations-both.sh` |
-
-> **Canvas vs this file:** Open this **`.md` file`** — confirm **Version 1.47** in the header. Allocations: [§5.7](#57-netbox-allocation-pools-fabric-dc2), [§10.8.3.1b](#10831b-mode-a-clab-allocations). Scripts: [Appendix E](#appendix-e--netbox-django-shell-scripts-full-source) (E.1–E.8, full source).
+**Section numbering:** §4 = Mode A · §5 = Mode B (step number = section number in §5.1 build order) · §6 = IPAM theory · §9 = CR reference · §10 = procedures and test guide · Appendix E = full script source.
 
 ---
 
-## Abstract
+## Table of contents
 
-This document describes Nokia Event-Driven Automation (EDA) integration with NetBox: two topology operating modes (EDA-managed and NetBox-managed), IPAM allocation pools decoupled from DCIM inventory, configuration custom resources (CRs), implementation procedures, and lab-derived constraints. It supersedes the informal *Integration Report* and *Import Guide* as the single reference.
+### Part I — Foundation
 
-**Critical design rule:** one EDA Kubernetes namespace = one fabric context = one `Instance` CR + one webhook URL. Topology import and allocation pools share the `Instance` but not reconcile scope.
+1. [Scope and audience](#1-scope-and-audience)
+2. [Definitions and acronyms](#2-definitions-and-acronyms)
+3. [Architecture overview](#3-architecture-overview)
+   - [3.1 Integration paths](#31-integration-paths-and-namespace-model)
+   - [3.2 Namespace bootstrap](#32-namespace-bootstrap-onboarding-prerequisites)
+
+### Part II — Operating Models
+
+4. [Mode A — EDA-managed DCIM sync](#4-mode-a--eda-managed-dcim-sync)
+5. [Mode B — NetBox-managed DCIM import](#5-mode-b--netbox-managed-dcim-import)
+   - [5.1 Overview and build order](#51-overview)
+   - [5.2 EDA namespace and bootstrap](#52-eda-namespace--bootstrap-fabric-dc2)
+   - [5.3 NetBox prerequisites](#53-netbox-prerequisites-fabric-dc2)
+   - [5.4 Secrets and Instance](#54-secrets--instance-cr-fabric-dc2)
+   - [5.5 NetBox DCIM modelling](#55-netbox-dcim-modelling--devices-interfaces-cables)
+   - [5.6 ApplyTopology](#56-applytopology-cr)
+   - [5.7 Allocation pools](#57-netbox-allocation-pools-fabric-dc2)
+
+### Part III — IPAM and Multi-Fabric Design
+
+6. [Allocations — IPAM pools](#6-allocations--ipam-pools)
+7. [Decoupling topology from allocations](#7-decoupling-topology-from-allocations)
+8. [Multi-namespace conventions and permissions](#8-multi-namespace-conventions-and-permissions)
+
+### Part IV — Configuration Reference
+
+9. [Configuration reference — CRs and enable steps](#9-configuration-reference--crs-and-enable-steps)
+
+### Part V — Implementation and Validation
+
+10. [Implementation procedures](#10-implementation-procedures)
+    - [10.8 Manual test guide](#108-manual-test-guide-with-example-crs-and-scripts)
+
+### Part VI — Operations and Constraints
+
+11. [EDA transactions](#11-eda-transactions)
+12. [Constraints and anti-patterns](#12-constraints-and-anti-patterns)
+
+### Part VII — Appendices
+
+13. [Appendices](#13-appendices)
+    - [A — Naming](#appendix-a--naming-conventions-production)
+    - [B — Django ORM scripts](#appendix-b--django-orm-scripts-lab)
+    - [C — Lab file locations](#appendix-c--lab-file-locations)
+    - [D — Kubernetes manifests](#appendix-d--example-kubernetes-manifest-files)
+    - [E — Script source (full)](#appendix-e--netbox-django-shell-scripts-full-source)
+14. [References](#14-references)
+
+### Quick reference — scripts
+
+| Script | Purpose | Appendix |
+|--------|---------|----------|
+| `nb-seed-eda-catalog.py` | Mode A catalog seed | [E.1](#e1-nb-seed-eda-catalogpy-mode-a) |
+| `nb-test-fabric-dc2.py` | Mode B DCIM fabric | [E.2](#e2-nb-test-fabric-dc2py-mode-b) |
+| `nb-test-allocation-pools-fabric-dc2.py` | Mode B allocation pools | [E.3](#e3-nb-test-allocation-pools-fabric-dc2py) |
+| `nb-test-allocation-pools-clab3tier.py` | Mode A allocation pools | [E.8](#e8-nb-test-allocation-pools-clab3tierpy) |
+| `nb-fix-platforms.py` | Mode A post-sync platform fix | [E.4](#e4-nb-fix-platformspy) |
+| `nb-run-seed-catalog.sh` | Catalog seed wrapper | [E.7](#e7-nb-run-seed-catalogsh) |
+| `setup-allocations-both-namespaces.sh` | Both-fabric allocation setup | — |
+| `verify-allocations-both.sh` | Allocation verification | — |
+| `run-mode-b-fabric-dc2.sh` | Mode B end-to-end orchestration | §5.1 |
 
 ---
 
@@ -133,10 +145,10 @@ This document describes Nokia Event-Driven Automation (EDA) integration with Net
 
 | Role | Primary sections |
 |------|------------------|
-| Network architect | 2, 3, 5 |
-| EDA operator | 7, 8, 9 |
-| NetBox administrator | 7, 8, 12 (Appendix B) |
-| Automation engineer | 7, 9, 12 (Appendix B) |
+| Network architect | 3, 4, 5, 7 |
+| EDA operator | 5, 8, 9, 10 |
+| NetBox administrator | 5, 8, 13 (Appendix B) |
+| Automation engineer | 5, 9, 10, 13 (Appendix E) |
 
 ---
 
@@ -157,58 +169,9 @@ This document describes Nokia Event-Driven Automation (EDA) integration with Net
 
 ---
 
-## Table of contents
-
-1. [Scope and audience](#1-scope-and-audience)
-2. [Definitions and acronyms](#2-definitions-and-acronyms)
-3. [Architecture overview](#3-architecture-overview)
-   - [3.1 Integration paths and namespace model](#31-integration-paths-and-namespace-model)
-   - [3.2 Namespace bootstrap](#32-namespace-bootstrap-onboarding-prerequisites)
-4. [Mode A — EDA-managed DCIM sync](#4-mode-a--eda-managed-dcim-sync)
-   - [4.1.1 Mode A — NetBox catalog prerequisites](#411-mode-a--netbox-catalog-prerequisites-before-sync)
-   - [4.3 The EDAManaged tag](#43-the-edamanaged-tag)
-   - [4.4 NetBox Instance CR (Mode A)](#44-netbox-instance-cr-mode-a)
-5. [Mode B — NetBox-managed DCIM import](#5-mode-b--netbox-managed-dcim-import)
-   - [5.1 Overview + build order](#51-overview)
-   - [5.2 EDA namespace + bootstrap](#52-eda-namespace--bootstrap-fabric-dc2)
-   - [5.3 NetBox prerequisites](#53-netbox-prerequisites-fabric-dc2) — [5.3.1](#531-catalog-objects-verify--usually-already-seeded) · [5.3.2](#532-create-region-tenant-and-site-in-netbox) · [5.3.3](#533-create-allocation-pool-tags-optional--before-57) · [5.3.4](#534-create-webhook-in-netbox) · [5.3.5](#535-create-event-rule-in-netbox) · [5.3.6](#536-not-needed-until-later) · [5.3.7](#537-global-setting-one-time-netbox-ui-or-admin)
-   - [5.4 Secrets + Instance](#54-secrets--instance-cr-fabric-dc2) — [5.4.1](#541-secrets-fabric-dc2yaml) · [5.4.2](#542-instance-fabric-dc2yaml)
-   - [5.5 NetBox DCIM](#55-netbox-dcim-modelling--devices-interfaces-cables) — [5.5.1](#551-topology-summary) · [5.5.2](#552-prepare-the-script) · [5.5.3](#553-run-the-script) · [5.5.4](#554-manual-alternative-netbox-ui)
-   - [5.6 ApplyTopology](#56-applytopology-cr)
-   - [**5.7 Allocation pools**](#57-netbox-allocation-pools-fabric-dc2) — VLAN · ASN · system IP · mgmt IP · ISL subnet
-6. [Allocations — IPAM pools](#6-allocations--ipam-pools)
-   - [6.3 Allocation CR types](#63-allocation-cr--all-pool-types)
-   - [**6.4 Pool index (`fabric-dc2`)**](#64-lab-examples--all-pool-types-fabric-dc2) — see §5.7 for full examples
-7. [Decoupling topology from allocations](#7-decoupling-topology-from-allocations)
-8. [Multi-namespace conventions and permissions](#8-multi-namespace-conventions-and-permissions)
-   - [8.1 Webhook URLs and tag naming](#81-webhook-urls-and-tag-naming)
-   - [8.2 API token and webhook secrets (lab convention)](#82-api-token-and-webhook-secrets-lab-convention)
-   - [8.3 NetBox API permissions](#83-netbox-api-permissions)
-9. [Configuration reference — CRs and enable steps](#9-configuration-reference--crs-and-enable-steps)
-   - [9.0 Overview](#90-overview) · [9.1 Secrets](#91-kubernetes-secrets-per-eda-namespace) · [9.2 Instance](#92-instance-cr-required-one-per-namespace) · [9.3 Webhook](#93-netbox-webhook-one-per-instance) · [9.4 Event rule](#94-netbox-event-rule) · [9.5 API token](#95-netbox-api-token-and-permissions) · [9.6 Namespace bootstrap](#96-eda-namespace-prerequisites-onboarding) · [9.7 DCIM (Mode B)](#97-topology-path-netbox-dcim-mode-b) · [9.8 IPAM allocations](#98-allocation-path-netbox-ipam--eda-crs)
-10. [Implementation procedures](#10-implementation-procedures)
-   - [10.0 Catalog seed (Mode A)](#100-procedure--seed-netbox-catalog-for-eda-sync-mode-a)
-   - [10.8 Manual test guide](#108-manual-test-guide-with-example-crs-and-scripts) — [10.8.1 Mode A](#1081-mode-a--eda--netbox-sync) · [10.8.2 Mode B](#1082-mode-b--netbox--eda-import) · [10.8.3 Allocations](#1083-test-allocations-optional)
-11. [EDA transactions](#11-eda-transactions)
-12. [Constraints and anti-patterns](#12-constraints-and-anti-patterns)
-13. [Appendices](#13-appendices)
-    - [Appendix A — Naming](#appendix-a--naming-conventions-production)
-    - [Appendix B — Django ORM scripts](#appendix-b--django-orm-scripts-lab)
-    - [Appendix C — Lab file locations](#appendix-c--lab-file-locations)
-    - [Appendix D — Kubernetes manifests](#appendix-d--example-kubernetes-manifest-files)
-    - [Appendix E — **Scripts (full source)**](#appendix-e--netbox-django-shell-scripts-full-source)
-      - [E.1 nb-seed-eda-catalog.py](#e1-nb-seed-eda-catalogpy-mode-a)
-      - [E.2 nb-test-fabric-dc2.py](#e2-nb-test-fabric-dc2py-mode-b)
-      - [E.3 nb-test-allocation-pools-fabric-dc2.py](#e3-nb-test-allocation-pools-fabric-dc2py)
-      - [E.4 nb-fix-platforms.py](#e4-nb-fix-platformspy)
-      - [E.5 nb-planned-fabric-full.py](#e5-nb-planned-fabric-fullpy-legacy-lab-site)
-      - [E.6 nb-delete-planned-fabric.py](#e6-nb-delete-planned-fabricpy)
-      - [E.7 nb-run-seed-catalog.sh](#e7-nb-run-seed-catalogsh)
-14. [References](#14-references)
-
-**Numbering convention:** Major sections use `§N` (e.g. §9). Subsections use `§N.M` (e.g. §9.1). **§4** = Mode A DCIM sync through Instance CR; **§5** = Mode B import (**§5.2** bootstrap through **§5.7** allocations; step number = section number in [§5.1](#51-overview)); **§6** = IPAM allocations theory (orthogonal to §4/§5). The manual test guide uses `§10.8.x.y`. Appendix D maps Kubernetes manifests; **Appendix E** holds full Python script source.
-
 ---
+
+# Part I — Foundation
 
 ## 3. Architecture overview
 
@@ -311,6 +274,8 @@ kubectl exec -n eda-system deploy/eda-toolbox -- \
 > The `eda.nokia.com/bootstrap=true` label marks which CRs are part of the namespace onboarding kit. Playground / clab namespaces are bootstrapped from the `eda-kpt-playground` package at install time; new fabric namespaces inherit the same kit via `bootstrap create`.
 
 ---
+
+# Part II — Operating Models
 
 ## 4. Mode A — EDA-managed DCIM sync
 
@@ -530,7 +495,7 @@ Allocation pool tags and `Allocation` CRs are in [§6](#6-allocations--ipam-pool
 
 **Baseline fabric:** `clab-3-tier-leaf-spine-dcgw`. Apply **secrets YAML first**, then **Instance YAML** — same EDA namespace.
 
-> **Multi-line YAML:** Each `yaml` code block below is a complete file with line breaks and indentation. Save manifests under `manifests/` in this repository (see `manifests/*.yaml.example` for secrets).
+> **Multi-line YAML:** Each `yaml` code block below is a complete file with line breaks and indentation. If you see everything on one line, open the lab file directly: `./manifests/instance-clab-3-tier-leaf-spine-dcgw.yaml` (or use the canvas — it now renders YAML in a `<pre>` block, not inline code).
 
 **Credentials** — edit `stringData` in the secrets file before apply:
 
@@ -999,7 +964,7 @@ Django ORM script executed **inside the NetBox pod** (`manage.py shell`). Create
 
 #### 5.5.2 Prepare the script
 
-Full source: [Appendix E.2](#e2-nb-test-fabric-dc2py-mode-b). Copy `scripts/nb-test-fabric-dc2.py` and **edit `NODE_PROFILE`** to match [§5.2](#52-eda-namespace--bootstrap-fabric-dc2) bootstrap:
+Full source: [Appendix E.2](#e2-nb-test-fabric-dc2py-mode-b). Copy to `manifests/nb-test-fabric-dc2.py` and **edit `NODE_PROFILE`** to match [§5.2](#52-eda-namespace--bootstrap-fabric-dc2) bootstrap:
 
 ```bash
 kubectl get nodeprofiles -n fabric-dc2 -o jsonpath='{.items[0].metadata.name}{"\n"}'
@@ -1311,6 +1276,10 @@ kubectl get indexallocationpools,ipallocationpools,subnetallocationpools,ipinsub
 Hands-on walkthrough: [§10.8.3](#1083-test-allocations-optional).
 
 ---
+
+---
+
+# Part III — IPAM and Multi-Fabric Design
 
 ## 6. Allocations — IPAM pools
 
@@ -1805,6 +1774,10 @@ See also [§4.3](#43-side-by-side-comparison--devices-interfaces-cables) — **D
 
 ---
 
+---
+
+# Part IV — Configuration Reference
+
 ## 9. Configuration reference — CRs and enable steps
 
 Consolidated checklist of every CR and NetBox setting required to enable integration. **Reference only** — apply in your environment with your namespace names, URLs, and tags.
@@ -2174,6 +2147,10 @@ NetBox UI: filter by `EDAManaged` — expect on synced DCIM (Mode A) and consume
 
 ---
 
+---
+
+# Part V — Implementation and Validation
+
 ## 10. Implementation procedures
 
 | Mode | Use sections |
@@ -2218,7 +2195,7 @@ The script uses `get_or_create()` so it is **idempotent** — safe to re-run aft
 
 #### Script source
 
-Full source: [Appendix E.1](#e1-nb-seed-eda-catalogpy-mode-a). Use `scripts/nb-seed-eda-catalog.py`. Adjust `FABRIC_TENANCY`, `DEVICE_TYPES`, and `ROLES` for your fabrics before running.
+Full source: [Appendix E.1](#e1-nb-seed-eda-catalogpy-mode-a). Copy to `manifests/nb-seed-eda-catalog.py`. Adjust `FABRIC_TENANCY`, `DEVICE_TYPES`, and `ROLES` for your fabrics before running.
 
 **Catalog scope:** Seeds **36** device types by default (6 lab + 30 extended Nokia SKUs). Set `DEVICE_TYPES = LAB_DEVICE_TYPES` in the script for lab-only. Full model/u_height list in [§4.1.1](#411-mode-a--netbox-catalog-prerequisites-before-sync).
 
@@ -2460,7 +2437,7 @@ kubectl get topolinks -n clab-srl-leaf-spine-dcgw --no-headers | wc -l
 
 ##### 10.8.1.2 Seed NetBox catalog
 
-**Full script:** [Appendix E.1](#e1-nb-seed-eda-catalogpy-mode-a) — use `scripts/nb-seed-eda-catalog.py`. Review `FABRIC_TENANCY`, `DEVICE_TYPES`, and `ROLES` before running.
+**Full script:** [Appendix E.1](#e1-nb-seed-eda-catalogpy-mode-a) — save entire block to `./scripts/nb-seed-eda-catalog.py` (or `manifests/`). Review `FABRIC_TENANCY`, `DEVICE_TYPES`, and `ROLES` before running.
 
 **Then run (WSL):**
 
@@ -2771,6 +2748,10 @@ bash ./manifests/test-verify-integration.sh
 
 ---
 
+---
+
+# Part VI — Operations and Constraints
+
 ## 11. EDA transactions
 
 Individual CR changes use EDA **transactions** (atomic, Git-backed). Distinct from `ApplyTopology` workflow ops (`create` / `reconcile` / `replace`).
@@ -2826,6 +2807,10 @@ See [EDA transactions documentation](https://docs.eda.dev/latest/user-guide/tran
 | `ENFORCE_GLOBAL_UNIQUE=true` with overlapping topologies | Duplicate IP allocation failures |
 
 ---
+
+---
+
+# Part VII — Appendices
 
 ## 13. Appendices
 
@@ -3045,9 +3030,9 @@ python3 ./manifests/gen-planned-eda.py
 kubectl apply -f /tmp/planned-fabric-eda.yaml
 ```
 
-### Appendix C — Lab file locations
+### Appendix C — Repository layout
 
-**Kubernetes manifests** (primary — edit `stringData`, then `kubectl apply -f`):
+**Kubernetes manifests** (`manifests/`): (primary — edit `stringData`, then `kubectl apply -f`):
 
 ```
 ./manifests/
@@ -3078,7 +3063,7 @@ kubectl apply -f /tmp/planned-fabric-eda.yaml
 
 ### Appendix D — Example Kubernetes manifest files
 
-Save manifests from §4.4 / §5 / §9 YAML blocks (or use copies in `manifests/`). Pattern: **edit YAML → `kubectl apply -f <file>`**.
+Save these from §4.4 / §5 / §9 YAML blocks (or use lab copies in `manifests/`). Pattern: **edit YAML → `kubectl apply -f <file>`**.
 
 | File | Kind(s) | Namespace (lab) | Section |
 |------|---------|-----------------|---------|
@@ -3096,7 +3081,7 @@ Save manifests from §4.4 / §5 / §9 YAML blocks (or use copies in `manifests/`
 
 ### Appendix E — NetBox Django shell scripts (full source)
 
-**Every script below is complete** — copy the entire fenced block; there are no `...` omissions. Lab copies: `./scripts\`.
+**Every script below is complete** — copy the entire fenced block; there are no `...` omissions. Lab copies: `./scripts/`.
 
 | Script | Appendix | Mode | Used in |
 |--------|----------|------|---------|
@@ -3777,4 +3762,4 @@ print("\nNetBox IPAM ready — apply allocations-clab-3-tier-leaf-spine-dcgw.yam
 
 ---
 
-*End of document. Replace namespace names, region/tenant pairs (`region-1`/`tenant-a` for first fabric, `region-2`/`tenant-b` for second), and NodeProfile names for your deployment.*
+*End of document NETBOX-EDA-TD-001 v2.0. Customize namespace names, region/tenant pairs, and NodeProfile names for your deployment.*
