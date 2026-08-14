@@ -11,9 +11,9 @@ Document ID: **NETBOX-EDA-TD-001**
   - Removed the stale `Section 8.0–8.8` pointer. **This error is also present in v2 and the full markdown** — not yet corrected there.
   - Added `Document version: Public v1` and a status line (lab-validated, circulated for review, not official Nokia product documentation).
   - Added a **References** section carrying the repository URL, both document paths, and EDA / NetBox documentation links.
+- Moved the allocation pool tag step (lead-in, **Customization → Tags → Add**, tag table) from §6 up to §5.7, its first reference. In the summary layout §6 comes after §5.7, so a reader was told to tag IPAM objects before being shown how to create the tags. The how-to also belongs with the hands-on pool creation rather than the architecture section. Its trailing caveat was dropped rather than moved: in the new location the surrounding paragraphs already state that the tags are plain strings and that the whole step is optional.
 - Verified: every remaining § citation resolves inside the summary (21 of them); none point outside it.
 - Numbering left aligned with v2 (body runs 8 → 11 → 12) rather than renumbered.
-- **Known gap:** §5.3.3 (create allocation pool tags) was dropped from the summary. The two places that relied on it now say the tag can be pre-created / created if missing, without instructions. Consider restoring the step if the summary is meant to stand alone.
 
 ## Version 2.2.1 (2026-08-10) — draft
 

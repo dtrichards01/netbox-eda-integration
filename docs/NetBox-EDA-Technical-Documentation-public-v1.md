@@ -1012,9 +1012,21 @@ Hands-on walkthrough and reference detail are in the full technical documentatio
 
 ### 5.7 NetBox allocation pools (fabric-dc2)
 
-**Optional step 6** in [§5.1](#Xc719e00ed9ce0b2b0576dca6ea38b4056582a83). Requires [§5.4](#Xf05e880280a4a5b3338c39b84f7bb0b25917f82) (Instance reachable) and IPAM object types enabled in the event rule ([§5.3.5](#Xd225876499b0239d3068f1e1f611ffb5c625337)). Allocation pool tags can be pre-created beforehand.
+**Optional step 6** in [§5.1](#Xc719e00ed9ce0b2b0576dca6ea38b4056582a83). Requires [§5.4](#Xf05e880280a4a5b3338c39b84f7bb0b25917f82) (Instance reachable) and IPAM object types enabled in the event rule ([§5.3.5](#Xd225876499b0239d3068f1e1f611ffb5c625337)). Allocation pool tags can be pre-created — see below.
 
 Create tagged IPAM objects in NetBox **before** kubectl apply -f allocations-fabric-dc2.yaml. Tags are **plain strings** (not key=value device tags). Theory and CR matrix: [§6.3](#X3737d0a92ed47a6e83651f30fc15c4019ff0dd0).
+
+If you create the pools through the NetBox UI, create the tags first — the script below creates them for you:
+
+1.  **Customization → Tags → Add** (repeat for each)
+
+| Tag name                | Used on            |
+|-------------------------|--------------------|
+| eda-fabric-dc2-vlan     | VLAN Group         |
+| eda-fabric-dc2-asn      | ASN Range          |
+| eda-fabric-dc2-systemip | Prefix (Active)    |
+| eda-fabric-dc2-mgmt     | Prefix (Active)    |
+| eda-fabric-dc2-isl      | Prefix (Container) |
 
 #### 5.7.0 Create all pools at once (script)
 
@@ -1317,20 +1329,6 @@ The hands-on walkthrough is in the full technical documentation.
 ## 6. Allocations — IPAM pools
 
 This section covers architecture and CR reference – we are using Mode B namespace for reference.
-
-If you plan to test IPAM allocations, create **plain string** tags now:
-
-1.  **Customization → Tags → Add** (repeat for each)
-
-| Tag name                | Used on            |
-|-------------------------|--------------------|
-| eda-fabric-dc2-vlan     | VLAN Group         |
-| eda-fabric-dc2-asn      | ASN Range          |
-| eda-fabric-dc2-systemip | Prefix (Active)    |
-| eda-fabric-dc2-mgmt     | Prefix (Active)    |
-| eda-fabric-dc2-isl      | Prefix (Container) |
-
-Allocation tags are **not** key=value device tags. Skip this subsection if you are only doing DCIM import.
 
 IPAM allocation pools are **orthogonal** to DCIM Mode A and Mode B . Same Instance CR; pool tags on NetBox IPAM objects.
 
