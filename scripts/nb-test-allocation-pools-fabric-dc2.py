@@ -45,7 +45,7 @@ def tag_prefix(cidr: str, status: str, tag_name: str, description: str):
 
 tag_prefix(SYSTEM_PREFIX, "active", TAG_SYSTEMIP, "fabric-dc2 system / loopback IPs")
 tag_prefix(MGMT_PREFIX, "active", TAG_MGMT, "fabric-dc2 management IPs")
-tag_prefix(ISL_PREFIX, "container", TAG_ISL, "fabric-dc2 ISL /31-/30 subnets")
+tag_prefix(ISL_PREFIX, "container", TAG_ISL, "fabric-dc2 ISL /31 point-to-point subnets")
 
 tag_vlan = plain_tag(TAG_VLAN)
 try:

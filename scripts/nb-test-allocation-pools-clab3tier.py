@@ -11,10 +11,12 @@ TAG_ASN = "eda-clab3tier-asn"
 TAG_SYSTEMIP = "eda-clab3tier-systemip"
 TAG_MGMT = "eda-clab3tier-mgmt"
 TAG_ISL = "eda-clab3tier-isl"
+TAG_ISL_V6 = "eda-clab3tier-isl-ipv6"
 
 SYSTEM_PREFIX = "10.0.10.0/24"
 MGMT_PREFIX = "192.168.110.0/24"
 ISL_PREFIX = "10.254.0.0/16"
+ISL_IPV6_PREFIX = "2005::/64"
 ASN_START = 4200010000
 ASN_END = 4200010999
 
@@ -45,7 +47,13 @@ def tag_prefix(cidr: str, status: str, tag_name: str, description: str):
 
 tag_prefix(SYSTEM_PREFIX, "active", TAG_SYSTEMIP, "clab3tier system / loopback IPs")
 tag_prefix(MGMT_PREFIX, "active", TAG_MGMT, "clab3tier management IPs")
-tag_prefix(ISL_PREFIX, "container", TAG_ISL, "clab3tier ISL /31-/30 subnets")
+tag_prefix(ISL_PREFIX, "container", TAG_ISL, "clab3tier ISL /31 point-to-point subnets")
+tag_prefix(
+    ISL_IPV6_PREFIX,
+    "container",
+    TAG_ISL_V6,
+    "clab3tier ISL IPv6 /127 point-to-point (from 2005::/64 container; not 121:: system space)",
+)
 
 tag_vlan = plain_tag(TAG_VLAN)
 try:

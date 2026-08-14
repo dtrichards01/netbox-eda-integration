@@ -2,12 +2,88 @@
 
 Document ID: **NETBOX-EDA-TD-001**
 
+## Public v1 (2026-08-14) — for review
+
+- **New public summary** (`NetBox-EDA-Technical-Documentation-public-v1.docx`) — condensed from Word v2 for external circulation. Published alongside the full guide in [netbox-eda-integration](https://github.com/dtrichards01/netbox-eda-integration), with a markdown rendition for GitHub readability.
+- Review fixes applied to the summary:
+  - **Removed all citations of sections that exist only in the detailed doc** — section-number cross-references are kept for the detailed doc. The trim had left 8 dangling (§9.4, §9.7, §10.8.1.5, §10.8.2, §10.8.3, §5.3.3 ×2); the sentences were rewritten to refer to "the full technical documentation" by name instead. `§10.8.1.5` previously read as an IP address in body text.
+  - Trimmed the §-numbering legend to the sections this document actually contains (§4 Mode A, §5 Mode B, §6 IPAM theory).
+  - Removed the stale `Section 8.0–8.8` pointer. **This error is also present in v2 and the full markdown** — not yet corrected there.
+  - Added `Document version: Public v1` and a status line (lab-validated, circulated for review, not official Nokia product documentation).
+  - Added a **References** section carrying the repository URL, both document paths, and EDA / NetBox documentation links.
+- Verified: every remaining § citation resolves inside the summary (21 of them); none point outside it.
+- Numbering left aligned with v2 (body runs 8 → 11 → 12) rather than renumbered.
+- **Known gap:** §5.3.3 (create allocation pool tags) was dropped from the summary. The two places that relied on it now say the tag can be pre-created / created if missing, without instructions. Consider restoring the step if the summary is meant to stand alone.
+
+## Version 2.2.1 (2026-08-10) — draft
+
+- **Word v2** (`NetBox-EDA-Technical-Documentation-v2.docx`) adopted as canonical master (edit Word first; sync markdown from v2)
+- §6.3 ASN table: Mode B blocked — **Unknown** controller behaviour (was: known)
+- §14 References: removed edactl namespace bootstrap bullet; removed end-of-document footer (matches v2)
+
+## Version 2.2 (2026-08-10) — draft
+
+- New **Introduction — EDA NetBox App** section (product overview from [docs.eda.dev/apps/netbox](https://docs.eda.dev/latest/apps/netbox/)): CR types, IPAM/topology models, webhooks, EDAManaged, link to lab Modes A/B
+- Word export and canvas refreshed for v2.2
+
+## Version 2.1.1 (2026-08-01) — draft
+
+- ASN allocation §6.3: App version **4.0.1** behaviour — reconciler requires synced-site cache (`sync.enabled: true`); Mode B ASN pool blocked (lab finding)
+- Word source: `NetBox-EDA-Technical-Documentation-v1.docx` adopted as canonical `.docx` export
+
+## Version 2.1 (2026-07-27) — draft
+
+- §5.7.5a: Mode A IPv6 ISL example (`2005::/64` Container, `/127`, tag `eda-clab3tier-isl-ipv6`, Allocation `eda-isl-ipv6`)
+- §6.4.7: `clab-3-tier-leaf-spine-dcgw` six Allocation CRs table
+- §7.1.1: Bootstrap `SubnetAllocationPool` vs NetBox-backed pools
+- §8.1: ISL IPv4/IPv6 tag and prefix columns for clab3tier
+- Appendix E.8–E.9: `nb-test-allocation-pools-clab3tier.py` and `nb-add-clab3tier-isl-ipv6-only.py`
+- §4.1.1 / §9.4: Webhook + event rule prerequisites before EDA sync (`reachable=true` ≠ full DCIM mirror)
+- Mode A build order and checklist: webhook + event rule before expecting full DCIM mirror
+
 ## Version 2.0 (2026-07-18)
 
 - Professional document structure: executive summary, conventions, part-based TOC
 - Revision history moved to this file
 - Repository-relative paths (`scripts/`, `manifests/`)
 - Part I–VII organization without renumbering core sections
+
+## Version 1.56 (2026-07-20)
+
+- Document owner: Darren Richards, Cloud & Enterprise
+
+## Version 1.55 (2026-07-20)
+
+- Extended catalog notes: SR-7s / SR-14s RU height — "depending on power config"
+
+## Version 1.54 (2026-07-20)
+
+- Replaced misaligned ASCII box diagrams (§3.1, §4.1, §5.1, §6.1, §7.1) with bordered tables for cleaner Word export
+
+## Version 1.53 (2026-07-20)
+
+- §5.6: removed fabric-dc2 troubleshooting table (redundant)
+
+## Version 1.52 (2026-07-20)
+
+- Mode B cables: omit NetBox `Cable.type` (optional DCIM field; not used by `ApplyTopology` or reflected in EDA `TopoLink`)
+
+## Version 1.51 (2026-07-20)
+
+- Word export: `apply-word-table-borders.py` post-processes every table (Table Grid + full grid borders + autofit)
+- Lab fabric platforms table: `7250 IXR-X1B` / `X3B` → SR Linux; removed `(`srl`)` / `(`sros`)` from OS column
+
+## Version 1.50 (2026-07-20)
+
+- §3.2: CLI subsection renamed to **Namespace creation (edactl CLI)**; approach table shows `EDA Namespace CR` without `spec.bootstrap.fromNamespace` path
+- §4.1: Mode A sync flow diagram aligned ASCII box; §4.1.1 Region/Tenant table separated from catalog prerequisites table
+- Word export: reference template sample table with grid borders (pandoc inherits for all pipe tables)
+- ISL subnet allocation: `subnetLength` **/30 → /31** across docs, manifests, and seed scripts (point-to-point links)
+
+## Version 1.49 (2026-07-18)
+
+- §3.2 terminology: "namespace bootstrap" → **namespace instantiation** (onboarding kit copy; distinct from ZTP/day-0 bootstrap)
+- Removed misleading `repopulate` callout; updated §3.2 anchor, TOC, and cross-refs (§5.2, §9.6, §10.1, §10.8.2.1)
 
 ## Version 1.47 (2026-07-18)
 
@@ -66,6 +142,6 @@ Document ID: **NETBOX-EDA-TD-001**
 | 1.44 | 2026-07-17 | Lab documentation | §5 renumbered — step N = §5.N (5.2 bootstrap … 5.7 allocations); expanded §5.3 NetBox prerequisites; full §5.7 allocation examples |
 | 1.45 | 2026-07-17 | Lab documentation | Appendix E expanded — **full** source for all lab scripts (E.1–E.7); §10.8 partial snippets replaced with E.x pointers |
 | 1.46 | 2026-07-18 | Lab documentation | §5.5/Appendix E.2 — device tag `site=fabric-dc2` (not `eda.nokia.com/source=netbox`); cable type `cat6`; ApplyTopology troubleshooting for forbidden source label and invalid `mmr` CableType |
-| 1.47 | 2026-07-18 | Lab documentation | Mode A clab allocations (`eda-clab3tier-*`, `allocations-clab-3-tier-leaf-spine-dcgw.yaml`); §6.3 ASN/sync gate documented; §8.1 tag table + verify/setup scripts |
+| 1.48 | 2026-07-18 | Lab documentation | §3.1 site↔namespace mapping clarified; §3.2 bootstrap — removed invalid `repopulate`; delete/recreate guidance |
 
 

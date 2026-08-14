@@ -111,7 +111,7 @@ for leaf, leaf_if, spine, spine_if in links:
     if CableTermination.objects.filter(termination_type=ct, termination_id__in=[a.id, b.id]).exists():
         print(f"cable skip (iface already connected) {label}")
         continue
-    cable = Cable.objects.create(type="cat6", status="planned", label=label)
+    cable = Cable.objects.create(status="planned", label=label)
     cable.tags.set([isl_tag])
     CableTermination.objects.create(cable=cable, termination_type=ct, termination_id=a.id, cable_end="A")
     CableTermination.objects.create(cable=cable, termination_type=ct, termination_id=b.id, cable_end="B")

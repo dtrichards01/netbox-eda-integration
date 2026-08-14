@@ -30,7 +30,19 @@ spec:
   instance: netbox
   tags: [eda-clab3tier-isl]
   type: subnet
-  subnetLength: 30
+  subnetLength: 31
+---
+apiVersion: netbox.eda.nokia.com/v1alpha1
+kind: Allocation
+metadata:
+  name: eda-isl-ipv6
+  namespace: clab-3-tier-leaf-spine-dcgw
+spec:
+  enabled: true
+  instance: netbox
+  tags: [eda-clab3tier-isl-ipv6]
+  type: subnet
+  subnetLength: 127
 ---
 apiVersion: netbox.eda.nokia.com/v1alpha1
 kind: Allocation

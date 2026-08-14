@@ -4,16 +4,16 @@ DOC=$(dirname "$0")
 POD=$(kubectl get pod -n netbox -l app.kubernetes.io/name=netbox -o jsonpath='{.items[0].metadata.name}')
 
 echo "=== 1. NetBox IPAM pools — fabric-dc2 (idempotent) ==="
-kubectl cp "$(dirname "$0")/nb-test-allocation-pools-fabric-dc2.py" "netbox/${POD}:/tmp/nb-test-allocation-pools-fabric-dc2.py"
+kubectl cp "$DOC/nb-test-allocation-pools-fabric-dc2.py" "netbox/${POD}:/tmp/nb-test-allocation-pools-fabric-dc2.py"
 kubectl exec -n netbox "$POD" -- python /opt/netbox/netbox/manage.py shell -c 'exec(open("/tmp/nb-test-allocation-pools-fabric-dc2.py").read())'
 
 echo "=== 2. NetBox IPAM pools — clab-3-tier-leaf-spine-dcgw ==="
-kubectl cp "$(dirname "$0")/nb-test-allocation-pools-clab3tier.py" "netbox/${POD}:/tmp/nb-test-allocation-pools-clab3tier.py"
+kubectl cp "$DOC/nb-test-allocation-pools-clab3tier.py" "netbox/${POD}:/tmp/nb-test-allocation-pools-clab3tier.py"
 kubectl exec -n netbox "$POD" -- python /opt/netbox/netbox/manage.py shell -c 'exec(open("/tmp/nb-test-allocation-pools-clab3tier.py").read())'
 
 echo "=== 3. Apply Allocation CRs ==="
-kubectl apply -f "$(dirname "$0")/../manifests/allocations-fabric-dc2.yaml"
-kubectl apply -f "$(dirname "$0")/../manifests/allocations-clab-3-tier-leaf-spine-dcgw.yaml"
+kubectl apply -f "$DOC/allocations-fabric-dc2.yaml"
+kubectl apply -f "$DOC/allocations-clab-3-tier-leaf-spine-dcgw.yaml"
 
 echo "=== 4. Refresh all allocations via ApplyAllocation ==="
 for ns in fabric-dc2 clab-3-tier-leaf-spine-dcgw; do
