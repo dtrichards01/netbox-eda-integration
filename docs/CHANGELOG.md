@@ -9,11 +9,20 @@ Document ID: **NETBOX-EDA-TD-001**
   - **Removed all citations of sections that exist only in the detailed doc** — section-number cross-references are kept for the detailed doc. The trim had left 8 dangling (§9.4, §9.7, §10.8.1.5, §10.8.2, §10.8.3, §5.3.3 ×2); the sentences were rewritten to refer to "the full technical documentation" by name instead. `§10.8.1.5` previously read as an IP address in body text.
   - Trimmed the §-numbering legend to the sections this document actually contains (§4 Mode A, §5 Mode B, §6 IPAM theory).
   - Removed the stale `Section 8.0–8.8` pointer. **This error is also present in v2 and the full markdown** — not yet corrected there.
-  - Added `Document version: Public v1` and a status line (lab-validated, circulated for review, not official Nokia product documentation).
+  - Added `Document version: Public v1` and a `Note:` line (lab-validated integration guide, a summary of the full technical documentation, not official Nokia product documentation).
   - Added a **References** section carrying the repository URL, both document paths, and EDA / NetBox documentation links.
 - Moved the allocation pool tag step (lead-in, **Customization → Tags → Add**, tag table) from §6 up to §5.7, its first reference. In the summary layout §6 comes after §5.7, so a reader was told to tag IPAM objects before being shown how to create the tags. The how-to also belongs with the hands-on pool creation rather than the architecture section. Its trailing caveat was dropped rather than moved: in the new location the surrounding paragraphs already state that the tags are plain strings and that the whole step is optional.
-- Verified: every remaining § citation resolves inside the summary (21 of them); none point outside it.
-- Numbering left aligned with v2 (body runs 8 → 11 → 12) rather than renumbered.
+- **Renumbered so the summary is self-consistent** rather than aligned with v2, which left gaps wherever content was omitted:
+  - §11 → **§9** (EDA transactions, with 11.1–11.4 → 9.1–9.4) and §12 → **§10** (Constraints and anti-patterns). The body ran 1–8 then jumped to 11. Nothing cited 11 or 12 by number, so no cross-references were affected.
+  - §4.3 → **§4.2**, §4.4 → **§4.3** (the gap at 4.2), and §5.3.4–5.3.7 → **§5.3.3–5.3.6** (the gap at 5.3.3, left by moving the tag step to §5.7). Citations of the moved subsections were remapped in the same pass, since doing it sequentially would have collided.
+  - Numbered the one unnumbered subsection inside a numbered section: **§5.8 Mode A vs Mode B (summary)**.
+  - Removed an empty `Heading 4`, which would have rendered as a blank table-of-contents entry.
+- Removed the remaining pointers into the full guide, which the first sweep missed because it searched for section marks only:
+  - `Appendix E.2` / `Appendix E.3` citations (×4) — the summary has no appendices, so these were dead links. Now name the shipped script instead.
+  - Reader-role table cited section 13 and Appendices B and E, none of which exist here.
+  - Two `§4.4–4.5` ranges. An audit keyed on `§` misses a range's upper bound, so these went unnoticed twice; both now point at §4.2, which holds all the EDAManaged material in this document.
+- Marked the table-of-contents field dirty so Word rebuilds it on open — it carries no cached entries, so the new numbering would not otherwise appear.
+- Verified after renumbering: numbering is continuous at every level, and all 22 cited numbers resolve inside the summary, counting both single references and range bounds.
 
 ## Version 2.2.1 (2026-08-10) — draft
 

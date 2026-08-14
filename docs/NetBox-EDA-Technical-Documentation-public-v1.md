@@ -4,7 +4,7 @@ August 14, 2026
 
 Document version: Public v1
 
-Status: Lab-validated integration guide, circulated for review and comment. This is a summary of the full technical documentation and is not official Nokia product documentation.
+Note: This is a Lab-validated integration guide. This is a summary of the full technical documentation and is not official Nokia product documentation.
 
 EDA Base Release: 26.4.2.
 
@@ -225,12 +225,12 @@ Allocations support both webhook and workflow models.
 
 ### 1.2 Audience
 
-| Role                 | Primary sections          |
-|----------------------|---------------------------|
-| Network architect    | 3, 4, 5, 7                |
-| EDA operator         | 5, 8, 9, 10               |
-| NetBox administrator | 5, 8, 13 (Appendix B)     |
-| Automation engineer  | 5, 9, 10, 13 (Appendix E) |
+| Role                 | Primary sections |
+|----------------------|------------------|
+| Network architect    | 3, 4, 5, 7       |
+| EDA operator         | 5, 8, 9, 10      |
+| NetBox administrator | 5, 8             |
+| Automation engineer  | 5, 9, 10         |
 
 ## 2. Definitions and acronyms
 
@@ -242,7 +242,7 @@ Allocations support both webhook and workflow models.
 | **Instance**                | netbox.eda.nokia.com/v1alpha1 CR — connection to one NetBox server per EDA namespace                                                        |
 | **Allocation**              | CR mapping tagged NetBox IPAM objects to EDA allocation pools                                                                               |
 | **ApplyTopology**           | Workflow CR importing a NetBox site into EDA as TopoNode/TopoLink                                                                           |
-| **EDAManaged**              | Reserved NetBox tag (+ eda_managed field) marking objects EDA created or claimed — see §4.4–4.5                                             |
+| **EDAManaged**              | Reserved NetBox tag (+ eda_managed field) marking objects EDA created or claimed — see §4.2                                                 |
 | **TopoNode**                | EDA topology CR representing an SR Linux node                                                                                               |
 | **Reconcile**               | ApplyTopology default — desired state = NetBox site only; orphans deleted                                                                   |
 | **Namespace instantiation** | CRs labeled eda.nokia.com/bootstrap=true form the template onboarding kit; EDA copies them into new namespaces via instantiation — see §3.2 |
@@ -396,7 +396,7 @@ Before enabling Instance.spec.sync.enabled, seed NetBox with the **DCIM catalog*
 | **Platform**                           | Recommended                                     | EDA sets platform on synced devices when mapped                                                                                                                                                                                                                 | Lab: srl, sros — see nb-fix-platforms.py post-sync                                  |
 | **DeviceRole**                         | Recommended                                     | EDA maps from **eda.nokia.com/role** label on each TopoNode (e.g. leaf, spine, dcgw, border-leaf) — these are **fabric role labels** on nodes in that namespace, not separate NetBox sites. Pre-create matching DeviceRole records so sync can set Device.role. |                                                                                     |
 | **Site / Device / Cable**              | **No** — created by sync                        | **EDA**                                                                                                                                                                                                                                                         | Tagged EDAManaged after push                                                        |
-| **EDAManaged tag + eda_managed field** | Pre-create tag optional; CF usually EDA-created | **EDA controller** (or you pre-create tag)                                                                                                                                                                                                                      | See §4.4–4.5 — must exist in NetBox before EDA can tag objects                      |
+| **EDAManaged tag + eda_managed field** | Pre-create tag optional; CF usually EDA-created | **EDA controller** (or you pre-create tag)                                                                                                                                                                                                                      | See §4.2 — must exist in NetBox before EDA can tag objects                          |
 | **API token**                          | Yes — DCIM write for Mode A                     | —                                                                                                                                                                                                                                                               | Same token can be reused across namespaces.                                         |
 | **Webhook**                            | Yes — one per EDA namespace                     | —                                                                                                                                                                                                                                                               | URL path includes namespace + Instance name.                                        |
 | **Event rule**                         | Yes — bound to that webhook                     | —                                                                                                                                                                                                                                                               | **Required, not optional.** A webhook without an event rule does nothing.           |
@@ -490,7 +490,7 @@ Interface port templates (QSFP-DD counts, etc.) are **not** created by the catal
 
 6.  Optional post-sync fixes: Changes to platform assignment, device-type u_height etc (run nb-fix-platforms.py)
 
-### 4.3 The EDAManaged tag
+### 4.2 The EDAManaged tag
 
 EDAManaged is a **reserved NetBox tag** (and matching **eda_managed boolean custom field**) used by the Nokia EDA NetBox app to mark objects EDA created or claimed.
 
@@ -536,7 +536,7 @@ Objects NetBox should treat as **owned by EDA**:
 | Your planned fabric (Mode B)         | Site and devices **without** EDAManaged; only consumed IPs/VLANs get it after allocation |
 | Troubleshoot “who owns this device?” | If EDAManaged → EDA; if not → your team (or not yet synced)                              |
 
-### 4.4 NetBox Instance CR (Mode A)
+### 4.3 NetBox Instance CR (Mode A)
 
 The **NetBox Instance CR** connects EDA to NetBox for this namespace. For Mode A, set sync.enabled: true with matching region / tenant.
 
@@ -825,7 +825,7 @@ Copy the token once — it goes in secrets-fabric-dc2.yaml → apiToken.
 
 Site name must match ApplyTopology.spec.siteName (fabric-dc2). The device script can get_or_create the site if you skip step 3 — creating it here assigns region/tenant in the UI first.
 
-#### 5.3.4 Create webhook in NetBox
+#### 5.3.3 Create webhook in NetBox
 
 **NetBox UI only** — **Customization → Webhooks → Add** (NetBox 4.x: **Operations → Integrations → Webhooks → Add**)
 
@@ -850,7 +850,7 @@ URL must be reachable **from the NetBox pod** (not browser localhost):
 
 Do **not** reuse the clab webhook URL or signing secret — each EDA namespace needs its own webhook + secret.
 
-#### 5.3.5 Create event rule in NetBox
+#### 5.3.4 Create event rule in NetBox
 
 **NetBox UI only** — **Customization → Event Rules → Add** (NetBox 4.x: **Operations → Integrations → Event Rules → Add**)
 
@@ -880,7 +880,7 @@ Do **not** reuse the clab webhook URL or signing secret — each EDA namespace n
 
 For the full lab (topology + optional allocations), enable **all** types — same object set as Mode A; only the webhook URL targets fabric-dc2.
 
-#### 5.3.6 Not needed until later
+#### 5.3.5 Not needed until later
 
 | Item                              | When                                                                      |
 |-----------------------------------|---------------------------------------------------------------------------|
@@ -888,7 +888,7 @@ For the full lab (topology + optional allocations), enable **all** types — sam
 | VLAN groups, prefixes, ASN ranges | [§5.7](#X69c0b58b636e24406d804afba17593991378e2a) — optional              |
 | EDAManaged on site or devices     | **Never** on Mode B design objects                                        |
 
-#### 5.3.7 Global setting (one-time, NetBox UI or admin)
+#### 5.3.6 Global setting (one-time, NetBox UI or admin)
 
 Confirm ENFORCE_GLOBAL_UNIQUE=false ([§8.3](#Xc20f2c56567c9b18f710108fbbe1fa5aa27d0d8)).
 
@@ -950,7 +950,7 @@ Django ORM script executed **inside the NetBox pod** (manage.py shell). Creates 
 
 #### 5.5.2 Prepare the script
 
-Full source: [Appendix E.2](#e2-nb-test-fabric-dc2py-mode-b). Copy to manifests/nb-test-fabric-dc2.py and **edit NODE_PROFILE** to match [§5.2](#X56a525b261cd0ea68478e0fd4da6a41a11274cf) NodeProfile from namespace instantiation:
+Copy scripts/nb-test-fabric-dc2.py to manifests/nb-test-fabric-dc2.py and **edit NODE_PROFILE** to match [§5.2](#X56a525b261cd0ea68478e0fd4da6a41a11274cf) NodeProfile from namespace instantiation:
 
     kubectl get nodeprofiles -n fabric-dc2 -o jsonpath='{.items[0].metadata.name}{"\n"}'
 
@@ -966,7 +966,7 @@ Script is idempotent — safe to re-run.
 
 #### 5.5.3 Run the script
 
-After saving [Appendix E.2](#e2-nb-test-fabric-dc2py-mode-b) to disk, copy into the NetBox pod and execute:
+After saving the script to disk, copy into the NetBox pod and execute:
 
     # From WSL — lab file path
     SCRIPT=../manifests/nb-test-fabric-dc2.py
@@ -1012,7 +1012,7 @@ Hands-on walkthrough and reference detail are in the full technical documentatio
 
 ### 5.7 NetBox allocation pools (fabric-dc2)
 
-**Optional step 6** in [§5.1](#Xc719e00ed9ce0b2b0576dca6ea38b4056582a83). Requires [§5.4](#Xf05e880280a4a5b3338c39b84f7bb0b25917f82) (Instance reachable) and IPAM object types enabled in the event rule ([§5.3.5](#Xd225876499b0239d3068f1e1f611ffb5c625337)). Allocation pool tags can be pre-created — see below.
+**Optional step 6** in [§5.1](#Xc719e00ed9ce0b2b0576dca6ea38b4056582a83). Requires [§5.4](#Xf05e880280a4a5b3338c39b84f7bb0b25917f82) (Instance reachable) and IPAM object types enabled in the event rule ([§5.3.4](#Xd225876499b0239d3068f1e1f611ffb5c625337)). Allocation pool tags can be pre-created — see below.
 
 Create tagged IPAM objects in NetBox **before** kubectl apply -f allocations-fabric-dc2.yaml. Tags are **plain strings** (not key=value device tags). Theory and CR matrix: [§6.3](#X3737d0a92ed47a6e83651f30fc15c4019ff0dd0).
 
@@ -1030,7 +1030,7 @@ If you create the pools through the NetBox UI, create the tags first — the scr
 
 #### 5.7.0 Create all pools at once (script)
 
-**File:** nb-test-allocation-pools-fabric-dc2.py — full source [Appendix E.3](#e3-nb-test-allocation-pools-fabric-dc2py). Creates all five NetBox objects + tags in one run:
+**File:** nb-test-allocation-pools-fabric-dc2.py. Creates all five NetBox objects + tags in one run:
 
     SCRIPT=../scripts/nb-test-allocation-pools-fabric-dc2.py
     POD=$(kubectl get pod -n netbox -l app.kubernetes.io/name=netbox -o jsonpath='{.items[0].metadata.name}')
@@ -1305,7 +1305,7 @@ Child /127 prefixes appear in NetBox **after** the fabric consumes the pool (und
 
 The hands-on walkthrough is in the full technical documentation.
 
-### Mode A vs Mode B (summary)
+### 5.8 Mode A vs Mode B (summary)
 
 |                      | Mode A                   | Mode B                          |
 |----------------------|--------------------------|---------------------------------|
@@ -1314,8 +1314,6 @@ The hands-on walkthrough is in the full technical documentation.
 | **sync.enabled**     | true                     | false                           |
 | **Import to EDA**    | Containerlab / workflows | **ApplyTopology**               |
 | **DCIM token perms** | create / update / delete | read (import only)              |
-
-#### 
 
 | Mode                                         | EDAManaged on DCIM source?         | EDAManaged on allocated IPAM?        |
 |----------------------------------------------|------------------------------------|--------------------------------------|
@@ -1551,7 +1549,7 @@ Create tagged IPAM objects in NetBox **before** kubectl apply -f allocations-fab
 
 #### 6.4.0 Run all pools (script)
 
-**File:** nb-test-allocation-pools-fabric-dc2.py — full source [Appendix E.3](#e3-nb-test-allocation-pools-fabric-dc2py). Creates all five objects + tags in one run:
+**File:** nb-test-allocation-pools-fabric-dc2.py. Creates all five objects + tags in one run:
 
     SCRIPT=../scripts/nb-test-allocation-pools-fabric-dc2.py
     POD=$(kubectl get pod -n netbox -l app.kubernetes.io/name=netbox -o jsonpath='{.items[0].metadata.name}')
@@ -1809,7 +1807,7 @@ Also required: Extras \> Tag, Extras \> Custom Field (for EDAManaged / eda_manag
 
 2.  EDA: namespace + **namespace instantiation** ([§5.2](#X56a525b261cd0ea68478e0fd4da6a41a11274cf) / §3.2)
 
-3.  EDA: secrets + **Instance CR** → verify status.reachable: true ([§4.4](#X7c0b2c60ed3f490ac6b5591e75229dfb1359826) Mode A, [§5.4](#Xf05e880280a4a5b3338c39b84f7bb0b25917f82) Mode B)
+3.  EDA: secrets + **Instance CR** → verify status.reachable: true ([§4.3](#X7c0b2c60ed3f490ac6b5591e75229dfb1359826) Mode A, [§5.4](#Xf05e880280a4a5b3338c39b84f7bb0b25917f82) Mode B)
 
 4.  EDA: **Allocation** CRs (pool tags must already exist on NetBox IPAM)
 
@@ -1821,11 +1819,11 @@ Also required: Extras \> Tag, Extras \> Custom Field (for EDAManaged / eda_manag
 
 # Part IV — Operations and Constraints
 
-## 11. EDA transactions
+## 9. EDA transactions
 
 Individual CR changes use EDA **transactions** (atomic, Git-backed). Distinct from ApplyTopology workflow ops (create / reconcile / replace).
 
-### 11.1 Per-resource operation types
+### 9.1 Per-resource operation types
 
 | Op          | Resource exists | Resource missing | Behaviour                        |
 |-------------|-----------------|------------------|----------------------------------|
@@ -1835,7 +1833,7 @@ Individual CR changes use EDA **transactions** (atomic, Git-backed). Distinct fr
 | **patch**   | Field update    | Fails            | JSON Patch (RFC 6902)            |
 | **delete**  | Deletes         | Fails            | Remove by GVK + name + namespace |
 
-### 11.2 Rule of thumb (NetBox-imported fabric)
+### 9.2 Rule of thumb (NetBox-imported fabric)
 
 | Goal                             | Use                                    |
 |----------------------------------|----------------------------------------|
@@ -1845,7 +1843,7 @@ Individual CR changes use EDA **transactions** (atomic, Git-backed). Distinct fr
 | Add device from NetBox           | ApplyTopology with **Create** workflow |
 | Remove one resource              | delete                                 |
 
-### 11.3 Transaction vs topology import
+### 9.3 Transaction vs topology import
 
 | Mechanism                         | Orphans in namespace            |
 |-----------------------------------|---------------------------------|
@@ -1853,7 +1851,7 @@ Individual CR changes use EDA **transactions** (atomic, Git-backed). Distinct fr
 | ApplyTopology reconcile           | **Deleted** if not in site spec |
 | NetworkTopology operation: create | Untouched                       |
 
-### 11.4 Execution and inspection
+### 9.4 Execution and inspection
 
 -   **dryRun:** validate without pushing to nodes
 
@@ -1865,7 +1863,7 @@ Individual CR changes use EDA **transactions** (atomic, Git-backed). Distinct fr
 
 See [EDA transactions documentation](https://docs.eda.dev/latest/user-guide/transactions/) for full API and rollback (Revert / Restore).
 
-## 12. Constraints and anti-patterns
+## 10. Constraints and anti-patterns
 
 | Mistake                                                | Consequence                                                                                                            |
 |--------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
