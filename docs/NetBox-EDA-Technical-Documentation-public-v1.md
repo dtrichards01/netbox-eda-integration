@@ -199,7 +199,7 @@ Allocations support both webhook and workflow models.
 | **Manifests**       | ../manifests/ — Kubernetes YAML and secret templates             |
 | **Pass criteria**   | Explicit checks after each procedure block                       |
 
-**Section numbering:** §4 = Mode A · §5 = Mode B (step number = section number in §5.1 build order) · §6 = IPAM theory.
+**Section numbering:** §4 = Mode A · §5 = Mode B (step number = section number in §5.1 build order) · §6 = IPAM Allocations.
 
 ## 1. Scope and audience
 

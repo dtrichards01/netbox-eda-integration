@@ -16,12 +16,13 @@ Document ID: **NETBOX-EDA-TD-001**
   - §11 → **§9** (EDA transactions, with 11.1–11.4 → 9.1–9.4) and §12 → **§10** (Constraints and anti-patterns). The body ran 1–8 then jumped to 11. Nothing cited 11 or 12 by number, so no cross-references were affected.
   - §4.3 → **§4.2**, §4.4 → **§4.3** (the gap at 4.2), and §5.3.4–5.3.7 → **§5.3.3–5.3.6** (the gap at 5.3.3, left by moving the tag step to §5.7). Citations of the moved subsections were remapped in the same pass, since doing it sequentially would have collided.
   - Numbered the one unnumbered subsection inside a numbered section: **§5.8 Mode A vs Mode B (summary)**.
-  - Removed an empty `Heading 4`, which would have rendered as a blank table-of-contents entry.
+  - Removed an empty `Heading 4`, which would have rendered as a blank table-of-contents entry. **It was also separating the two comparison tables in §5.8**, and Word merged them into one 9-row table on the next save, since it treats tables with nothing between them as one. They are separated by an empty body paragraph now — keep a paragraph between adjacent tables.
 - Removed the remaining pointers into the full guide, which the first sweep missed because it searched for section marks only:
   - `Appendix E.2` / `Appendix E.3` citations (×4) — the summary has no appendices, so these were dead links. Now name the shipped script instead.
   - Reader-role table cited section 13 and Appendices B and E, none of which exist here.
   - Two `§4.4–4.5` ranges. An audit keyed on `§` misses a range's upper bound, so these went unnoticed twice; both now point at §4.2, which holds all the EDAManaged material in this document.
-- Marked the table-of-contents field dirty so Word rebuilds it on open — it carries no cached entries, so the new numbering would not otherwise appear.
+- Marked the table-of-contents field dirty so Word rebuilds it on open — it carries no cached entries, so the new numbering would not otherwise appear. Word drops the flag when it saves without updating fields, so it needs reapplying after each round-trip until the field is populated once (in Word: select all, then F9).
+- Numbering legend now reads `§6 = IPAM Allocations` (author edit).
 - Verified after renumbering: numbering is continuous at every level, and all 22 cited numbers resolve inside the summary, counting both single references and range bounds.
 
 ## Version 2.2.1 (2026-08-10) — draft
