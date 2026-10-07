@@ -2,6 +2,21 @@
 
 Document ID: **NETBOX-EDA-TD-001**
 
+## Public v1.1 (2026-10-05) — audited master; full guide 2.3 (2026-10-06)
+
+- **`NetBox-EDA-Technical-Documentation-public-v1.1.docx` is now the master** (author audit). It is not generated or edited from the markdown; everything else follows it. Baseline: EDA 26.8.1, NetBox app v7.0.1.
+- Full guide (`NetBox-EDA-Technical-Documentation.md`, Word v2) brought into line with the master's audited wording:
+  - Intro: "DCIM — Topology integration model" heading; the controller creates the `EDAManaged` tag and matching `eda_managed` custom field; new note that webhook connectivity is optional (use `ApplyAllocation` / `ApplyTopology` workflows instead).
+  - Executive summary: allocations support both webhook and workflow models.
+  - §3.2: onboarding CRs are copied according to the `eda.nokia.com/bootstrap` label; NodeUser patch is only needed when its `nodeSelector` is non-empty and lacks the NetBox labels (applies to hardware as well as Containerlab). Stale `Section 8.0–8.8` pointer removed.
+  - §4.1.1 / §4.3: `eda_managed` restored alongside the tag and ownership custom fields; Extras → Custom Field permission marked "needs checking". The lab observation stays in the full guide only: `eda_managed` was not created after topology sync or allocation write-back (2026-10-06) — status "needs checking with Nokia".
+  - §6.3 ASN finding: app version 4.0.3; Mode B ASN "Blocked (Under investigation)"; shared Instance name and overlapping ASN ranges stated as supported.
+  - §8.3: Extras permissions are for `EDAManaged` / `eda_managed` automation.
+  - §14 References: repository URL and the public v1.1 master.
+- Fixed in the full guide only (the master has the same wording — flag for the next master revision): §5.2 NodeUser patch said `eda.nokia.com/source=netbox` comes "from your NetBox device tags", contradicting §5.5 (EDA sets it; tagging devices with it breaks `ApplyTopology`).
+- §8.3 "See also" link pointed at a non-existent §4.3 anchor; now §4.2.
+- Publish script ships public v1.1 (docx + markdown rendition) to the integration repo.
+
 ## Public v1 (2026-08-14) — for review
 
 - **New public summary** (`NetBox-EDA-Technical-Documentation-public-v1.docx`) — condensed from Word v2 for external circulation. Published alongside the full guide in [netbox-eda-integration](https://github.com/dtrichards01/netbox-eda-integration), with a markdown rendition for GitHub readability.

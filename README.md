@@ -4,7 +4,7 @@ Technical documentation and lab scripts for integrating **Nokia Event-Driven Aut
 
 ## Start here
 
-1. New to the integration? Read the summary: [`docs/NetBox-EDA-Technical-Documentation-public-v1.md`](docs/NetBox-EDA-Technical-Documentation-public-v1.md) — architecture, both operating modes, IPAM design and constraints. The [`.docx`](docs/NetBox-EDA-Technical-Documentation-public-v1.docx) is the master if you want to comment in Word.
+1. New to the integration? Read the summary: [`docs/NetBox-EDA-Technical-Documentation-public-v1.1.md`](docs/NetBox-EDA-Technical-Documentation-public-v1.1.md) — architecture, both operating modes, IPAM design and constraints. The [`.docx`](docs/NetBox-EDA-Technical-Documentation-public-v1.1.docx) is the master if you want to comment in Word.
 2. Need the reference detail? Read the full guide: [`docs/NetBox-EDA-Technical-Documentation.md`](docs/NetBox-EDA-Technical-Documentation.md) — adds the CR reference (§9), implementation procedures and manual test guide (§10), and appendices (§13). The summary cites these section numbers, so the two read together.
 3. Copy `manifests/secrets-*.yaml.example` → remove `.example`, fill in secrets
 4. Run scripts from WSL against your EDA cluster + NetBox pod
@@ -17,7 +17,7 @@ Set `FABRIC_DC2_WEBHOOK_SECRET` to match your NetBox webhook signing secret.
 
 | Path | Contents |
 |------|----------|
-| `docs/NetBox-EDA-Technical-Documentation-public-v1.docx` / `.md` | Public summary — start here |
+| `docs/NetBox-EDA-Technical-Documentation-public-v1.1.docx` / `.md` | Public summary — start here |
 | `docs/NetBox-EDA-Technical-Documentation.md` | Full technical documentation |
 | `docs/CHANGELOG.md` | Document revision history |
 | `scripts/` | NetBox Django ORM scripts + lab orchestration |

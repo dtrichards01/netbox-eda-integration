@@ -6,22 +6,25 @@
 |---|---|
 | **Document ID** | NETBOX-EDA-TD-001 |
 | **Document owner** | Darren Richards, Cloud & Enterprise |
-| **Version** | 2.2.1 (draft) |
+| **Version** | 2.3 (draft) |
 | **Status** | Draft |
 | **Classification** | Internal — Lab reference |
-| **Last updated** | 2026-08-10 |
+| **Last updated** | 2026-10-06 |
 | **Repository** | `netbox-eda-lab` |
 
 | Environment (lab) | Value |
 |-------------------|-------|
+| EDA base release | 26.8.1 |
+| NetBox app | v7.0.1 |
 | Kubernetes cluster | `kind-eda-demo-wsl2` |
 | NetBox UI | `http://localhost:8081` |
 | EDA UI | `https://localhost:9443` |
 | Mode A namespace | `clab-3-tier-leaf-spine-dcgw` |
 | Mode B namespace | `fabric-dc2` |
 
-**Word master:** `docs/NetBox-EDA-Technical-Documentation-v2.docx` (canonical — edit in Word first).  
-**Markdown:** `docs/NetBox-EDA-Technical-Documentation.md` (synced from v2).  
+**Master (audited summary):** `docs/NetBox-EDA-Technical-Documentation-public-v1.1.docx` — authoritative wording for everything it covers; this guide follows it. Do not regenerate or edit the master from this file.  
+**Word (full guide):** `docs/NetBox-EDA-Technical-Documentation-v2.docx` — generated from this markdown by `scripts/md-to-word.sh`.  
+**Markdown:** `docs/NetBox-EDA-Technical-Documentation.md` (full guide: CR reference, procedures, test guide, appendices).  
 **Word export:** `docs/NetBox-EDA-Technical-Documentation.docx` (copy of v2).  
 **Change log:** [CHANGELOG.md](CHANGELOG.md)
 
@@ -58,7 +61,7 @@ EDA continues to allocate from its own pool CRs (`IPAllocationPool`, `SubnetAllo
 
 When more than one NetBox prefix, ASN range, or VLAN group should feed the same pool, assign a **distinct tag** in NetBox and reference that tag in `Allocation.spec.tags`. The Allocation resource **name** becomes the EDA allocation pool name.
 
-### Topology integration model
+### DCIM — Topology integration model
 
 Two complementary paths exist:
 
@@ -73,7 +76,9 @@ NetBox **Event Rules** trigger a **Webhook** on create, update, or delete of IPA
 https://<eda-host>:<port>/core/httpproxy/v1/netbox/webhook/<namespace>/<instance-name>
 ```
 
-NetBox must also expose an API token (write-capable for IPAM; DCIM write when topology sync or `ApplyTopology` is used). The controller automatically creates the **EDAManaged** tag and matching `eda_managed` custom field in NetBox—do not rename or remove them.
+NetBox must also expose an API token (write-capable for IPAM; DCIM write when topology sync or `ApplyTopology` is used). The controller automatically creates the **EDAManaged** tag and matching `eda_managed` custom field in NetBox, plus ownership custom fields (`objectType`, `objectName`, and for IPAM `allocationObject` / `ownerObject`)—do not rename or remove them. (Lab note: `eda_managed` was not observed in this lab — see [§4.1.1](#411-mode-a--netbox-catalog-prerequisites-before-sync).)
+
+> **Webhook connectivity is optional.** If dynamic updates from NetBox are not wanted, drive reconciliation from EDA with workflows instead (`ApplyAllocation` for pools, `ApplyTopology` for Mode B import).
 
 ### Relationship to this guide
 
@@ -94,6 +99,8 @@ Nokia Event-Driven Automation (EDA) integrates with NetBox through the **EDA Net
 **Design rule:** one EDA Kubernetes namespace = one fabric context = one `Instance` CR + one dedicated webhook URL.
 
 This guide covers architecture, prerequisites, step-by-step procedures, Kubernetes manifests, NetBox Django scripts, and lab-validated constraints (including known gaps such as Mode B ASN allocation).
+
+Allocations support both webhook and workflow models.
 
 ---
 
@@ -195,7 +202,7 @@ This guide covers architecture, prerequisites, step-by-step procedures, Kubernet
 
 **Out of scope:**
 
-- NetBox installation and Helm chart configuration (except `ENFORCE_GLOBAL_UNIQUE`)
+- NetBox installation (Helm chart, database, ingress). The only NetBox setting this integration needs is `ENFORCE_GLOBAL_UNIQUE=false` ([§9.5](#95-netbox-api-token-and-permissions))
 - Non-SRL platforms as `TopoNode` (may appear as cable endpoints only)
 - EDA application development beyond the NetBox app
 
@@ -220,7 +227,7 @@ This guide covers architecture, prerequisites, step-by-step procedures, Kubernet
 | **Instance** | `netbox.eda.nokia.com/v1alpha1` CR — connection to one NetBox server per EDA namespace |
 | **Allocation** | CR mapping tagged NetBox IPAM objects to EDA allocation pools |
 | **ApplyTopology** | Workflow CR importing a NetBox site into EDA as TopoNode/TopoLink |
-| **EDAManaged** | Reserved NetBox tag (+ `eda_managed` field) marking objects EDA created or claimed — see §4.4–4.5 |
+| **EDAManaged** | Reserved NetBox tag (+ `eda_managed` field and `objectType` / `objectName` custom fields) marking objects EDA created or claimed — see §4.3 |
 | **TopoNode** | EDA topology CR representing an SR Linux node |
 | **Reconcile** | `ApplyTopology` default — desired state = NetBox site only; orphans deleted |
 | **Namespace instantiation** | CRs labeled `eda.nokia.com/bootstrap=true` form the template onboarding kit; EDA copies them into new namespaces via instantiation — see §3.2 |
@@ -264,7 +271,7 @@ Nokia EDA's NetBox app exposes **two independent integration paths**:
 
 ### 3.2 Namespace instantiation (onboarding prerequisites)
 
-Every new fabric namespace needs **onboarding kit** CRs before TopoNodes can onboard: `NodeProfile`, `NodeUser`, `Init`, mgmt/system IP pools, and related supporting resources. You do not need to hand-author these if namespace instantiation works.
+Every new fabric namespace needs relevant **onboarding** CRs before TopoNodes can onboard: `NodeProfile`, `NodeUser`, `Init`, mgmt/system IP pools, and related supporting resources. You do not need to hand-author these if namespace instantiation works.
 
 #### How it works
 
@@ -283,9 +290,9 @@ spec:
     fromNamespace: eda           # copy onboarding kit from template namespace
 ```
 
-EDA creates the Kubernetes namespace `fabric-dc2` and copies onboarding kit CRs in one step. Use `fromNamespace: clab-3-tier-leaf-spine-dcgw` (or another fabric) to inherit that namespace's NodeProfile set instead of generic `eda` profiles.
+EDA creates the Kubernetes namespace `fabric-dc2` and copies the relevant onboarding CRs in one step. Use `fromNamespace: clab-3-tier-leaf-spine-dcgw` (or another fabric) to inherit that namespace's NodeProfile set instead of the more generic `eda` profiles if required. Which CRs are copied is driven by the `eda.nokia.com/bootstrap` label on each resource.
 
-| What gets copied (typical) | Purpose |
+| What typically gets copied | Purpose |
 |--------------------------|---------|
 | **NodeProfile** | OS/version, onboarding creds, mgmt pool — name goes in NetBox `eda.nokia.com/node-profile=` tag |
 | **NodeUser** | Permanent management user; referenced by NodeProfile |
@@ -295,7 +302,7 @@ EDA creates the Kubernetes namespace `fabric-dc2` and copies onboarding kit CRs 
 
 **This is independent of NetBox** — namespace instantiation is pure EDA onboarding. It does **not** set `sync.enabled` or NetBox integration; that comes later via the `Instance` CR.
 
-#### Namespace creation (edactl CLI)
+#### Alternative namespace creation (edactl CLI)
 
 Same result as the EDA `Namespace` CR — run via **`eda-toolbox`**:
 
@@ -320,11 +327,11 @@ Use `--from-namespace clab-3-tier-leaf-spine-dcgw` to match clab NodeProfile nam
 **After instantiation — NetBox-specific adjustments:**
 
 1. Note the **NodeProfile name** copied into the namespace (e.g. `srl-leaf-spine-dcgw-srlinux-26.3.1`) — set matching tag on NetBox devices.
-2. **Patch `NodeUser` `nodeSelector`** if imported TopoNodes use labels different from the clab template (e.g. add `eda.nokia.com/source=netbox`).
+2. **Patch `NodeUser` `nodeSelector`** if imported TopoNodes use labels different from the clab template (e.g. add `eda.nokia.com/source=netbox`). Only needed if the NodeUser does not have an empty `nodeSelector`, or you have not already built the NodeUser with the relevant NetBox labels. This applies to physical hardware as well as Containerlab.
 3. **Patch `Init` `nodeSelectors`** similarly if nodes will onboard via ZTP.
-4. Namespace instantiation does **not** create NetBox `Instance` / `Allocation` CRs — add those separately (Section 8.0–8.8).
+4. Namespace instantiation does **not** create NetBox-specific CRs (`Instance` / `Allocation`) — add those separately ([§9](#9-configuration-reference--crs-and-enable-steps)).
 
-> The `eda.nokia.com/bootstrap=true` label marks which CRs belong to the **onboarding kit**. Playground / clab namespaces receive the kit from the `eda-kpt-playground` package at install time; new fabric namespaces get the same kit via **namespace instantiation** (EDA `Namespace` CR or `edactl namespace bootstrap create`).
+> The `eda.nokia.com/bootstrap=true` label marks which CRs belong to the **onboarding CRs**. Playground / clab namespaces receive the relevant CRs from the `eda-kpt-playground` package at install time; new fabric namespaces get the same core set via **namespace instantiation** (EDA `Namespace` CR or `edactl namespace bootstrap create`).
 
 ---
 
@@ -360,7 +367,7 @@ Mode A: EDA owns topology (`TopoNode` / `TopoLink`); NetBox mirrors DCIM with `E
 | (implicit) | Site | Named from namespace / sync config |
 | Interfaces | Device interfaces | Created as part of device sync |
 
-All pushed DCIM objects receive the **`EDAManaged`** tag and `eda_managed` custom field. **Only EDA should mutate EDAManaged DCIM objects.**
+All pushed DCIM objects receive the **`EDAManaged`** tag and EDA custom fields — `objectType` / `objectName` point back to the EDA object (for example `TopoNode`, `<namespace>/<node>`). **Only EDA should mutate EDAManaged DCIM objects.**
 
 **Typical lab example:** Containerlab fabric in `clab-3-tier-leaf-spine-dcgw` with `sync.enabled: true`, region `region-1`, tenant `tenant-a`. NetBox site mirrors the clab topology; devices carry `EDAManaged`.
 
@@ -381,14 +388,14 @@ Before enabling `Instance.spec.sync.enabled`, seed NetBox with the **DCIM catalo
 | **Platform** | Recommended | EDA sets platform on synced devices when mapped | Lab: `srl`, `sros` — see `nb-fix-platforms.py` post-sync |
 | **DeviceRole** | Recommended | EDA maps from **`eda.nokia.com/role`** label on each `TopoNode` (e.g. `leaf`, `spine`, `dcgw`, `border-leaf`) — these are **fabric role labels** on nodes in that namespace, not separate NetBox sites. Pre-create matching `DeviceRole` records so sync can set `Device.role`. |
 | **Site / Device / Cable** | **No** — created by sync | **EDA** | Tagged `EDAManaged` after push |
-| **`EDAManaged` tag + `eda_managed` field** | Pre-create tag optional; CF usually EDA-created | **EDA controller** (or you pre-create tag) | See §4.4–4.5 — must exist in NetBox before EDA can tag objects |
+| **`EDAManaged` tag + `eda_managed` field / ownership custom fields** | Pre-create tag optional; CF usually EDA-created | **EDA controller** (or you pre-create tag) | See §4.3 — must exist in NetBox before EDA can tag objects |
 | **API token** | Yes — DCIM write for Mode A | — | Same token can be reused across namespaces; see [§8.2](#82-api-token-and-webhook-secrets-lab-convention) |
 | **Webhook** | Yes — one per EDA namespace | — | URL path includes namespace + Instance name ([§9.3](#93-netbox-webhook-one-per-instance)) |
 | **Event rule** | Yes — bound to that webhook | — | **Required, not optional.** A webhook without an event rule does nothing. See [§9.4](#94-netbox-event-rule) |
 
 > **Lab-validated:** `Instance.status.reachable: true` only proves the API token works. It does **not** prove DCIM sync is complete. If the **event rule is missing**, initial device push may partially succeed on TopoNode reconcile, but **interfaces and cables will not sync**. Configure webhook **and** event rule in NetBox **before** expecting a full mirror. Disable or delete webhooks/event rules for namespaces you no longer use (e.g. `fabric-dc2`) — stale rules spam `instance not found` in `eda-netbox` logs.
 
-**Region / Tenant per fabric** — one pair per namespace with `sync.enabled: true`. **Baseline:** first Mode A fabric uses `region-1` / `tenant-a`; each additional fabric increments the number and tenant letter (`region-2` / `tenant-b`, `region-3` / `tenant-c`, …). Seed all pairs in the catalog script before enabling each NetBox Instance.
+**Region / Tenant per fabric** — one pair per namespace with `sync.enabled: true`. **Baseline:** for example, first Mode A fabric uses `region-1` / `tenant-a`; each additional fabric increments the number and tenant letter (`region-2` / `tenant-b`, `region-3` / `tenant-c`, …). Seed all pairs in the catalog script before enabling each NetBox Instance.
 
 | Order | EDA namespace (lab) | `Instance.spec.sync` | Notes |
 |-------|----------------------|----------------------|-------|
@@ -396,14 +403,17 @@ Before enabling `Instance.spec.sync.enabled`, seed NetBox with the **DCIM catalo
 | **Second** | `clab-srl-leaf-spine-dcgw` | `region: region-2`, `tenant: tenant-b` | Second Mode A fabric |
 | **Planned import** | `fabric-dc2` | `sync.enabled: false` | Mode B — assign Region/Tenant on NetBox Site manually |
 
-**`eda_managed` vs `EDAManaged`:** Two linked NetBox objects created on **first EDA reconcile** (sync or allocation):
+**How EDA marks what it owns:** a tag plus custom fields, created on **first EDA reconcile** (sync or allocation). Nokia's docs also list an `eda_managed` boolean custom field "on supported types". In this lab (EDA 26.8.1, NetBox app v7, NetBox 4.6.4, checked 2026-10-06) the controller did **not** create it, either after topology sync (Mode A `clab-3-tier-leaf-spine-dcgw`) or after an allocation write-back to NetBox IPAM. Status: needs checking with Nokia. Until confirmed, filter on the `EDAManaged` tag and the `objectType` / `allocationObject` custom fields instead.
 
-| Object | Type | Purpose |
-|--------|------|---------|
-| **`EDAManaged`** | NetBox **tag** | Visible in UI filters; marks “EDA owns this object” |
-| **`eda_managed`** | NetBox **custom field** (boolean) | Machine-readable flag on supported models; used by the NetBox app and API |
+| Object | Type | On | Purpose |
+|--------|------|----|---------|
+| **`EDAManaged`** | NetBox **tag** (slug `edamanaged`) | Anything EDA created or claimed | Visible in UI filters; marks “EDA owns this object” |
+| **`objectType`** | Custom field (text) | Site, Device, Cable, IP Address, Prefix, VLAN, ASN | EDA kind behind the object, e.g. `TopoNode` |
+| **`objectName`** | Custom field (text) | Site, Device, Cable | EDA object name, e.g. `clab-3-tier-leaf-spine-dcgw/dc-gw-1` |
+| **`operatingSystem`** | Custom field (text) | Device | Node OS, e.g. `sros` |
+| **`allocationObject`** / **`ownerObject`** | Custom fields (text) | IP Address, Prefix, VLAN, ASN | Which `Allocation` and owner consumed the value |
 
-Both are set together when EDA creates or claims an object. The catalog script only **checks** whether they exist — it does not create them. Ensure the **`EDAManaged` tag exists in NetBox** (pre-create or let EDA create on first reconcile with Extras Tag/CF permissions) before expecting tagged sync results.
+See them on any object page under **Custom Fields**, or list them all in **Customization → Custom Fields**. The catalog script only **checks** whether they exist — it does not create them. Ensure the **`EDAManaged` tag exists in NetBox** (pre-create or let EDA create on first reconcile with Extras Tag/CF permissions) before expecting tagged sync results.
 
 **Roles (`leaf` / `spine` / `dcgw`):** In EDA, each `TopoNode` carries labels such as `eda.nokia.com/role=leaf` and `site: <fabric-name>`. The fabric is the EDA **namespace** (and synced NetBox **Site**). Role labels describe the node's function **in that fabric**. The catalog seed pre-creates NetBox `DeviceRole` entries with the same names so Mode A sync can populate `Device.role`. Mode B: you set equivalent tags on NetBox devices before `ApplyTopology`.
 
@@ -457,7 +467,7 @@ Both are set together when EDA creates or claims an object. The catalog script o
 
 > **Platform string matching:** `DeviceType.model` must match `TopoNode.spec.platform` exactly (case/spacing). Lab uses `7250 IXR-X1B` and `7250 IXR-X3B`. Check platforms with:  
 > `kubectl get toponodes -n <ns> -o jsonpath='{range .items[*]}{.spec.platform}{"\n"}{end}' | sort -u`  
-> Interface port templates (QSFP-DD counts, etc.) are **not** created by the catalog script.
+> Interface port templates (QSFP-DD counts, etc.) are **not** created by the catalog script. Scripts are in the git repository ([Appendix E](#appendix-e--netbox-django-shell-scripts-full-source)).
 
 **Build order (Mode A):**
 
@@ -466,7 +476,7 @@ Both are set together when EDA creates or claims an object. The catalog script o
 3. EDA: namespace exists; Containerlab / workflows have `TopoNode`/`TopoLink` CRs
 4. EDA: `Instance` CR with `sync.enabled: true`, matching `region`/`tenant` → verify `reachable=true`
 5. Wait for sync — Devices, interfaces, Site, Cables appear in NetBox with `EDAManaged`
-6. Optional post-sync fixes: platform assignment, device-type `u_height` (`nb-fix-platforms.py`)
+6. Optional post-sync fixes: changes to platform assignment, device-type `u_height`, etc. (run `nb-fix-platforms.py`)
 
 ---
 
@@ -486,20 +496,20 @@ Full comparison and Mode B build steps: [§5](#5-mode-b--netbox-managed-dcim-imp
 
 ### 4.3 The EDAManaged tag
 
-`EDAManaged` is a **reserved NetBox tag** (and matching **`eda_managed` boolean custom field**) used by the Nokia EDA NetBox app to mark objects EDA created or claimed.
+`EDAManaged` is a **reserved NetBox tag** (and matching **boolean custom field** `eda_managed`, per Nokia's docs) used by the Nokia EDA NetBox app to mark objects EDA created or claimed. EDA also fills text custom fields (`objectType`, `objectName`, and for IPAM `allocationObject` / `ownerObject`) that link each object back to its EDA source — see the table in [§4.1.1](#411-mode-a--netbox-catalog-prerequisites-before-sync).
 
 **Important:** The tag is **not** defined on the EDA `Instance` CR. It is a **NetBox object** that must exist (or be created by EDA) before EDA can tag synced or allocated objects. Mode B design devices must **not** carry this tag — see [§5](#5-mode-b--netbox-managed-dcim-import).
 
-#### Who creates `EDAManaged` / `eda_managed`
+#### Who creates EDAManaged / EDA custom fields
 
 | Object | Typical creator | When |
 |--------|-------------------|------|
 | **`EDAManaged` tag** | EDA NetBox controller on **first reconcile**, **or you** pre-create in NetBox | Before/at first sync or first allocation write-back |
-| **`eda_managed` custom field** | EDA controller on first reconcile (recommended) | Same — requires **Extras → Custom Field** API permission |
+| **EDA custom fields** (`eda_managed` per Nokia docs; `objectType`, `objectName`, `operatingSystem`, `allocationObject`, `ownerObject`) | EDA controller on first reconcile (recommended) | Same — requires **Extras → Custom Field** API permission (needs checking) |
 
 EDA needs **Extras → Tag** and **Extras → Custom Field** write permission on the API token to auto-create these. If reconcile fails to tag objects, verify permissions and that the `EDAManaged` tag exists in NetBox (**Customization → Tags**).
 
-**Pre-create (optional but valid):** Create tag **`EDAManaged`** (slug `edamanaged`) in NetBox before applying the `Instance` CR if you want the tag visible before first reconcile. Do **not** rename or delete after EDA uses it. The `eda_managed` custom field is best left for EDA to create on first reconcile.
+**Pre-create (optional but valid):** Create tag **`EDAManaged`** (slug `edamanaged`) in NetBox before applying the `Instance` CR if you want the tag visible before first reconcile. Do **not** rename or delete after EDA uses it. The `eda_managed` and ownership custom fields are best left for EDA to create on first reconcile.
 
 #### What it marks
 
@@ -515,7 +525,7 @@ Objects NetBox should treat as **owned by EDA**:
 
 - **Do not manually edit** EDAManaged devices, cables, or sites in the NetBox UI for routine changes — EDA is the source of truth for those objects (Mode A) or for tracking allocation ownership (IPAM).
 - On the next **sync cycle**, EDA may **overwrite** manual NetBox edits to EDAManaged DCIM objects.
-- **Do not delete** the `EDAManaged` tag or `eda_managed` custom field — the NetBox app depends on them.
+- **Do not delete** the `EDAManaged` tag or `eda_managed` custom field, or the ownership custom fields (`objectType`, `objectName`, `allocationObject`, `ownerObject`) — the NetBox app depends on them.
 - **Do not run `ApplyTopology`** against a site or devices that already carry `EDAManaged` — the workflow expects a NetBox-owned design source (Mode B only).
 
 #### How to use it in practice
@@ -559,7 +569,7 @@ Allocation pool tags and `Allocation` CRs are in [§6](#6-allocations--ipam-pool
 | API token | Admin → Authentication → API Tokens | `stringData.apiToken` on Secret `netbox-api-token` |
 | Webhook secret | Operations → Integrations → Webhooks → **Secret** (this namespace) | `stringData.signatureKey` on Secret `netbox-webhook-signature` |
 
-Lab: one API token across namespaces ([§8.2](#82-api-token-and-webhook-secrets-lab-convention)); webhook secret **unique per namespace**.
+Lab: one API token across namespaces is possible ([§8.2](#82-api-token-and-webhook-secrets-lab-convention)); webhook secret **unique per namespace**.
 
 #### Mode A baseline — `clab-3-tier-leaf-spine-dcgw` (`region-1` / `tenant-a`)
 
@@ -618,6 +628,8 @@ kubectl get instance.netbox.eda.nokia.com netbox -n clab-3-tier-leaf-spine-dcgw 
 **Pass:** `reachable=true`
 
 #### Mode A second fabric — `clab-srl-leaf-spine-dcgw` (`region-2` / `tenant-b`)
+
+Reference only — shows multi-tenant alignment with NetBox (one Region/Tenant pair per Mode A namespace).
 
 ##### secrets-clab-srl-leaf-spine-dcgw.yaml
 
@@ -792,7 +804,7 @@ echo "eda.nokia.com/node-profile=${NODE_PROFILE}"
 
 **You do not hand-create** NodeProfile, NodeUser, Init, or IP pools — namespace instantiation (EDA `Namespace` CR or `edactl namespace bootstrap create`) copies them from the template namespace. The only post-instantiation edit in this lab is the **NodeUser patch** below so imported TopoNodes match SSH bindings.
 
-**Patch NodeUser** so imported TopoNodes (label `eda.nokia.com/source=netbox` from your NetBox device tags) match SSH/credential bindings:
+**Patch NodeUser** so imported TopoNodes match SSH/credential bindings. EDA sets the label `eda.nokia.com/source=netbox` on TopoNodes it imports — do **not** add it as a NetBox device tag ([§5.5](#55-netbox-dcim-modelling--devices-interfaces-cables)):
 
 ```bash
 kubectl patch nodeuser admin -n fabric-dc2 --type=json -p='[
@@ -950,7 +962,7 @@ For the full lab (topology + optional allocations), enable **all** types — sam
 
 #### 5.3.7 Global setting (one-time, NetBox UI or admin)
 
-Confirm `ENFORCE_GLOBAL_UNIQUE=false` ([§8.3](#83-netbox-api-permissions)).
+Confirm `ENFORCE_GLOBAL_UNIQUE=false` ([§9.5](#95-netbox-api-token-and-permissions)).
 
 **Pass:** Site `fabric-dc2` visible in NetBox UI (no `EDAManaged`); webhook + event rule saved; webhook **Secret** and API token copied ready for [§5.4](#54-secrets--instance-cr-fabric-dc2).
 
@@ -1382,7 +1394,7 @@ Hands-on walkthrough: [§10.8.3](#1083-test-allocations-optional).
 
 ## 6. Allocations — IPAM pools
 
-> **Mode B lab examples (all five pools):** [§5.7](#57-netbox-allocation-pools-fabric-dc2). This section covers architecture and CR reference; `fabric-dc2` walkthrough is in §5.7.
+> **Mode B lab examples (all five pools):** [§5.7](#57-netbox-allocation-pools-fabric-dc2). This section covers architecture and CR reference, using the Mode B namespace (`fabric-dc2`) for reference; the walkthrough is in §5.7.
 
 IPAM allocation pools are **orthogonal** to DCIM Mode A ([§4](#4-mode-a--eda-managed-dcim-sync)) and Mode B ([§5](#5-mode-b--netbox-managed-dcim-import)). Same `Instance` CR; pool tags on NetBox IPAM objects.
 
@@ -1443,7 +1455,7 @@ spec:
 |-------|-------------------|----------------------|
 | `sync.enabled` | **Yes** — EDA→NetBox device/cable push | **No** |
 | `sync.region` / `sync.tenant` | Yes (synced Site metadata) | No |
-| `disableWebhook` | No (sync is controller-driven) | **Yes** — use `ApplyAllocation` manually if true |
+| `disableWebhook` | **Yes** (Mode A) — device push is controller-driven, but interface and cable sync needs the webhook + event rule ([§4](#4-mode-a--eda-managed-dcim-sync)) | **Yes** — use `ApplyAllocation` manually if true |
 | `url`, `apiToken`, TLS | Both | Both |
 
 **Status fields:** `reachable`, `errorReason`, `lastChecked`
@@ -1484,7 +1496,7 @@ spec:
 
 VLAN and prefix-based pools (`vlan`, `ip-address`, `ip-in-subnet`, `subnet`) reconcile from **tagged NetBox IPAM objects only** — they work in both Mode A and Mode B.
 
-**ASN behaviour is different in App version 4.0.1.** The `eda-netbox` allocation reconciler seems to require the namespace site to be in its internal **synced-site cache**. That cache is populated when `Instance.spec.sync.enabled: true` (Mode A DCIM sync). With `sync.enabled: false` (Mode B), even a correctly tagged ASN range in NetBox and a healthy `ApplyTopology` import will log:
+**ASN behaviour is different in App version 4.0.3.** The `eda-netbox` allocation reconciler seems to require the namespace site to be in its internal **synced-site cache**. That cache is populated when `Instance.spec.sync.enabled: true` (Mode A DCIM sync). With `sync.enabled: false` (Mode B), even a correctly tagged ASN range in NetBox and a healthy `ApplyTopology` import will log:
 
 ```
 site not yet synced ... sync.enabled=false
@@ -1493,9 +1505,11 @@ site not yet synced ... sync.enabled=false
 | Mode | `sync.enabled` | VLAN / IP pools | ASN pool |
 |------|----------------|-----------------|----------|
 | A — EDA-managed (`clab-3-tier-leaf-spine-dcgw`) | `true` | Matched | **Matched** |
-| B — NetBox-managed (`fabric-dc2`) | `false` | Matched | **Blocked** (Unknown controller behaviour) |
+| B — NetBox-managed (`fabric-dc2`) | `false` | Matched | **Blocked** (Under investigation) |
 
-This is **not** caused by sharing the same `Instance` name (`netbox`) across namespaces — each namespace resolves `spec.instance` locally. It is **not** caused by overlapping ASN numeric ranges — matching is by **tag**. Mode B lab: expect **4/5** Allocation CRs matched; use Mode A namespace for full ASN pool testing until Nokia documents a Mode B workaround.
+Sharing the same `Instance` name (`netbox`) across namespaces is supported — each namespace resolves `spec.instance` locally — and overlapping ASN numeric ranges are supported, because matching is by **tag**.
+
+In this release combination, Mode B lab: expect **4/5** Allocation CRs matched; use Mode A namespace for full ASN pool testing until Nokia documents a Mode B workaround.
 
 **Tag rule:** one distinct tag per pool mapping. Multiple NetBox objects with the same tag can feed one `Allocation` (status shows `matchedPrefixes` / matched ranges).
 
@@ -1758,7 +1772,7 @@ Two different mechanisms can create **`SubnetAllocationPool`** (and other pool k
 | **Namespace bootstrap** | Copied from template namespace (`eda.nokia.com/bootstrap: "true"`) | **No** | **No** |
 | **NetBox app** | `Allocation` reconciles tagged IPAM → pool | **Yes** | **Yes** (parent pool object) |
 
-Webhooks do **not** create pool definitions; they refresh reconciliation after IPAM changes. The **`Allocation` CR** is the integration object for NetBox-backed pools.
+Webhooks do **not** create pool definitions; they refresh reconciliation after IPAM changes. The NetBox **`Allocation` CR** is the integration object for NetBox-backed pools.
 
 **Lab migration (e.g. IPv6 ISL `eda-isl-ipv6`):**
 
@@ -1874,9 +1888,9 @@ These are the **object permissions** on the NetBox API token referenced by `Inst
 | EDA-managed sync (`sync.enabled: true`) | IPAM: read+write; DCIM: **create/update/delete** | Sync **creates and updates** Site, Device, Cable, interfaces in NetBox |
 | Allocations only | IPAM: read+write; DCIM: read | Pools and consumed values only |
 
-Also required: `Extras > Tag`, `Extras > Custom Field` (for `EDAManaged` / `eda_managed` automation).
+Also required: `Extras > Tag`, `Extras > Custom Field` (for `EDAManaged` / `eda_managed` automation and the ownership custom fields).
 
-See also [§4.3](#43-side-by-side-comparison--devices-interfaces-cables) — **DCIM API perms** row.
+See also [§4.2](#42-mode-a-vs-mode-b-summary) — **DCIM token perms** row.
 
 ---
 
@@ -2293,7 +2307,7 @@ bash ../manifests/nb-run-seed-catalog.sh
 |--------|--------------|------------------------|
 | `Manufacturer` | `dcim.Manufacturer` | Vendor record DeviceTypes hang off (e.g. Nokia) |
 | `DeviceType` | `dcim.DeviceType` | Hardware SKU; **`model` must match `TopoNode.spec.platform`** |
-| `CustomField` | `extras.CustomField` | **Read-only check** — `eda_managed` is created by EDA on first sync, not by you |
+| `CustomField` | `extras.CustomField` | **Read-only check** — `objectType` / `objectName` are created by EDA on first sync, not by you |
 | `Platform` | `dcim.Platform` | OS family (`srl`, `sros`) — used for display and Mode B import rules |
 | `DeviceRole` | `dcim.DeviceRole` | leaf / spine / pe — mapped from EDA node labels |
 | `Region` | `dcim.Region` | Must match `Instance.spec.sync.region` |
@@ -2554,7 +2568,7 @@ SCRIPT=../manifests/nb-seed-eda-catalog.py
 kubectl exec -n netbox -i deployment/netbox -c netbox -- python /opt/netbox/netbox/manage.py shell < "$SCRIPT"
 ```
 
-**Pass:** NetBox UI → DCIM → Manufacturers / Device Types / Platforms; Tenancy → Regions / Tenants. Expect `Catalog seed complete (36 device types)`. `eda_managed` / `EDAManaged` still absent until first sync (expected).
+**Pass:** NetBox UI → DCIM → Manufacturers / Device Types / Platforms; Tenancy → Regions / Tenants. Expect `Catalog seed complete (36 device types)`. `EDAManaged` and the `objectType` / `objectName` custom fields still absent until first sync (expected).
 
 ##### 10.8.1.3 Secrets + NetBox Instance CR
 
@@ -2588,7 +2602,7 @@ kubectl get toponodes -n clab-3-tier-leaf-spine-dcgw --no-headers | wc -l
 
 Compare that count to NetBox UI → **DCIM → Devices** filtered by tag **`EDAManaged`**.
 
-**Pass:** Device names match EDA; synced site exists; `eda_managed` custom field populated.
+**Pass:** Device names match EDA; synced site exists; on a device page, **Custom Fields** shows `objectType: TopoNode` and `objectName: <namespace>/<device>`.
 
 ##### 10.8.1.6 Optional post-sync fix
 
@@ -3219,7 +3233,7 @@ It does not create Manufacturers for you.
 
 DeviceType.model must match TopoNode.spec.platform EXACTLY (case/spacing).
 
-After first sync, EDA auto-creates the EDAManaged tag and eda_managed custom field.
+After first sync, EDA auto-creates the EDAManaged tag and EDA custom fields (objectType / objectName; Nokia docs also list eda_managed).
 """
 from dcim.models import Manufacturer, DeviceType, Platform, DeviceRole, Region
 from extras.models import CustomField, Tag
@@ -3316,13 +3330,14 @@ for role_name in ROLES:
     print(f"role {role_name} created={created}")
 
 print("\n=== EDA automation objects (created by controller on first sync) ===")
-for cf in CustomField.objects.filter(name__icontains="eda"):
-    types = [ct.model for ct in cf.content_types.all()]
+EDA_CFS = ["objectType", "objectName", "operatingSystem", "allocationObject", "ownerObject", "eda_managed"]
+for cf in CustomField.objects.filter(name__in=EDA_CFS):
+    types = [ct.model for ct in cf.object_types.all()]
     print(f"  custom-field {cf.name} type={cf.type} on={types}")
 for t in Tag.objects.filter(name__icontains="EDAManaged"):
     print(f"  tag {t.name} slug={t.slug}")
-if not CustomField.objects.filter(name="eda_managed").exists():
-    print("  (eda_managed custom field not present yet — normal before first sync)")
+if not CustomField.objects.filter(name="objectType").exists():
+    print("  (objectType custom field not present yet — normal before first sync)")
 
 print(f"\nCatalog seed complete ({len(DEVICE_TYPES)} device types). Enable Instance sync.")
 ```
@@ -3796,6 +3811,8 @@ Idempotent NetBox seed for **IPv6 ISL container only** (`2005::/64`, tag `eda-cl
 
 ## 14. References
 
+- Integration repository (this guide, the public summary, scripts and manifests): <https://github.com/dtrichards01/netbox-eda-integration>
+- Public summary (master): `docs/NetBox-EDA-Technical-Documentation-public-v1.1.docx`
 - [Nokia EDA NetBox app](https://docs.eda.dev/latest/apps/netbox/)
 - [EDA transactions](https://docs.eda.dev/latest/user-guide/transactions/)
 - Ansible: `nokia.eda_core_v1.transaction.v2.transaction`

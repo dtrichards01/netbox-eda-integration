@@ -6,7 +6,7 @@ It does not create Manufacturers for you.
 
 DeviceType.model must match TopoNode.spec.platform EXACTLY (case/spacing).
 
-After first sync, EDA auto-creates the EDAManaged tag and eda_managed custom field.
+After first sync, EDA auto-creates the EDAManaged tag and EDA custom fields (objectType / objectName; Nokia docs also list eda_managed).
 """
 from dcim.models import Manufacturer, DeviceType, Platform, DeviceRole, Region
 from extras.models import CustomField, Tag
@@ -103,12 +103,13 @@ for role_name in ROLES:
     print(f"role {role_name} created={created}")
 
 print("\n=== EDA automation objects (created by controller on first sync) ===")
-for cf in CustomField.objects.filter(name__icontains="eda"):
-    types = [ct.model for ct in cf.content_types.all()]
+EDA_CFS = ["objectType", "objectName", "operatingSystem", "allocationObject", "ownerObject", "eda_managed"]
+for cf in CustomField.objects.filter(name__in=EDA_CFS):
+    types = [ct.model for ct in cf.object_types.all()]
     print(f"  custom-field {cf.name} type={cf.type} on={types}")
 for t in Tag.objects.filter(name__icontains="EDAManaged"):
     print(f"  tag {t.name} slug={t.slug}")
-if not CustomField.objects.filter(name="eda_managed").exists():
-    print("  (eda_managed custom field not present yet — normal before first sync)")
+if not CustomField.objects.filter(name="objectType").exists():
+    print("  (objectType custom field not present yet — normal before first sync)")
 
 print(f"\nCatalog seed complete ({len(DEVICE_TYPES)} device types). Enable Instance sync.")

@@ -1,24 +1,32 @@
-Darren Richards, Cloud & Enterprise
+# NetBox ↔ EDA Integration
 
-August 14, 2026
+## Technical Design and Implementation Guide
 
-Document version: Public v1
+Darren Richards, AI & Cloud
 
-Note: This is a Lab-validated integration guide. This is a summary of the full technical documentation and is not official Nokia product documentation.
+October 05<sup>th</sup>, 2026
 
-EDA Base Release: 26.4.2.
+Document version: Public v1.1
 
-NetBox App: v4.0.3
+Note: This is a Lab-validated integration guide. This is a summary of the full technical documentation available via the git-repository and is not official Nokia product documentation.
+
+EDA Base Release: 26.8.1
+
+NetBox App: v7.0.1
 
 # Table of Contents
 
-[Introduction — EDA NetBox App [2](#introduction-eda-netbox-app)](#introduction-eda-netbox-app)
+[NetBox ↔ EDA Integration [1](#netbox-eda-integration)](#netbox-eda-integration)
+
+[Technical Design and Implementation Guide [1](#technical-design-and-implementation-guide)](#technical-design-and-implementation-guide)
+
+[Introduction — EDA NetBox App [3](#introduction-eda-netbox-app)](#introduction-eda-netbox-app)
 
 [What the app provides [3](#what-the-app-provides)](#what-the-app-provides)
 
-[IPAM integration model [3](#ipam-integration-model)](#ipam-integration-model)
+[IPAM integration model [3](#dcim---topology-integration-model)](#dcim---topology-integration-model)
 
-[Topology integration model [3](#topology-integration-model)](#topology-integration-model)
+[Topology integration model [4](#dcim---topology-integration-model)](#dcim---topology-integration-model)
 
 [Event-driven operation [4](#event-driven-operation)](#event-driven-operation)
 
@@ -32,7 +40,7 @@ NetBox App: v4.0.3
 
 [1.1 Scope [5](#scope)](#scope)
 
-[1.2 Audience [5](#audience)](#audience)
+[1.2 Audience [6](#audience)](#audience)
 
 [2. Definitions and acronyms [6](#definitions-and-acronyms)](#definitions-and-acronyms)
 
@@ -42,81 +50,79 @@ NetBox App: v4.0.3
 
 [3.1 Integration paths and namespace model [6](#integration-paths-and-namespace-model)](#integration-paths-and-namespace-model)
 
-[3.2 Namespace instantiation (onboarding prerequisites) [7](#namespace-instantiation-onboarding-prerequisites)](#namespace-instantiation-onboarding-prerequisites)
+[3.2 Namespace instantiation (onboarding prerequisites) [8](#section)](#section)
 
-[Part II — Operating Models [9](#part-ii-operating-models)](#part-ii-operating-models)
+[Part II — Operating Modes [9](#part-ii-operating-modes)](#part-ii-operating-modes)
 
 [4. Mode A — EDA-managed DCIM sync [9](#mode-a-eda-managed-dcim-sync)](#mode-a-eda-managed-dcim-sync)
 
 [4.1 Mode A — EDA-managed (topology sync on) [9](#mode-a-eda-managed-topology-sync-on)](#mode-a-eda-managed-topology-sync-on)
 
-[4.3 The EDAManaged tag [13](#_Toc237609193)](#_Toc237609193)
+[4.2 The EDAManaged tag [14](#_Toc242179513)](#_Toc242179513)
 
-[4.4 NetBox Instance CR (Mode A) [15](#_Toc237609194)](#_Toc237609194)
+[4.3 NetBox Instance CR (Mode A) [15](#_Toc242179514)](#_Toc242179514)
 
 [5. Mode B — NetBox-managed DCIM import [18](#mode-b-netbox-managed-dcim-import)](#mode-b-netbox-managed-dcim-import)
 
-[5.1 Overview [18](#overview)](#overview)
+[5.1 EDA namespace + instantiation (fabric-dc2) [19](#eda-namespace-instantiation-fabric-dc2)](#eda-namespace-instantiation-fabric-dc2)
 
-[5.2 EDA namespace + instantiation (fabric-dc2) [19](#eda-namespace-instantiation-fabric-dc2)](#eda-namespace-instantiation-fabric-dc2)
+[5.2 NetBox prerequisites (fabric-dc2) [20](#netbox-prerequisites-fabric-dc2)](#netbox-prerequisites-fabric-dc2)
 
-[5.3 NetBox prerequisites (fabric-dc2) [20](#netbox-prerequisites-fabric-dc2)](#netbox-prerequisites-fabric-dc2)
+[5.3 Secrets + Instance CR (fabric-dc2) [23](#secrets-instance-cr-fabric-dc2)](#secrets-instance-cr-fabric-dc2)
 
-[5.4 Secrets + Instance CR (fabric-dc2) [23](#secrets-instance-cr-fabric-dc2)](#secrets-instance-cr-fabric-dc2)
+[5.4 NetBox DCIM modelling — devices, interfaces, cables [24](#netbox-dcim-modelling-devices-interfaces-cables)](#netbox-dcim-modelling-devices-interfaces-cables)
 
-[5.5 NetBox DCIM modelling — devices, interfaces, cables [24](#netbox-dcim-modelling-devices-interfaces-cables)](#netbox-dcim-modelling-devices-interfaces-cables)
+[5.5 ApplyTopology CR [25](#applytopology-cr)](#applytopology-cr)
 
-[5.6 ApplyTopology CR [25](#applytopology-cr)](#applytopology-cr)
+[5.6 Mode A vs Mode B (summary) [25](#_Toc242179521)](#_Toc242179521)
 
-[5.7 NetBox allocation pools (fabric-dc2) [25](#netbox-allocation-pools-fabric-dc2)](#netbox-allocation-pools-fabric-dc2)
+[Part III — IPAM and Multi-Fabric Design [26](#part-iii-ipam-and-multi-fabric-design)](#part-iii-ipam-and-multi-fabric-design)
 
-[Mode A vs Mode B (summary) [31](#mode-a-vs-mode-b-summary-1)](#mode-a-vs-mode-b-summary-1)
+[6. Allocations — IPAM pools [26](#allocations-ipam-pools)](#allocations-ipam-pools)
 
-[Part III — IPAM and Multi-Fabric Design [32](#part-iii-ipam-and-multi-fabric-design)](#part-iii-ipam-and-multi-fabric-design)
+[6.1 Architecture — one Instance per EDA namespace [26](#architecture-one-instance-per-eda-namespace)](#architecture-one-instance-per-eda-namespace)
 
-[6. Allocations — IPAM pools [32](#allocations-ipam-pools)](#allocations-ipam-pools)
+[6.2 Instance CR — full options [26](#instance-cr-full-options)](#instance-cr-full-options)
 
-[6.1 Architecture — one Instance per EDA namespace [32](#architecture-one-instance-per-eda-namespace)](#architecture-one-instance-per-eda-namespace)
+[6.3 Allocation CR — all pool types [27](#allocation-cr-all-pool-types)](#allocation-cr-all-pool-types)
 
-[6.2 Instance CR — full options [33](#instance-cr-full-options)](#instance-cr-full-options)
+[6.4 Lab examples — all pool types (fabric-dc2) [31](#lab-examples-all-pool-types-fabric-dc2)](#lab-examples-all-pool-types-fabric-dc2)
 
-[6.3 Allocation CR — all pool types [34](#allocation-cr-all-pool-types)](#allocation-cr-all-pool-types)
+[7. Decoupling topology from allocations [33](#decoupling-topology-from-allocations)](#decoupling-topology-from-allocations)
 
-[6.4 Lab examples — all pool types (fabric-dc2) [37](#lab-examples-all-pool-types-fabric-dc2)](#lab-examples-all-pool-types-fabric-dc2)
+[7.1 Two paths, one namespace [33](#two-paths-one-namespace)](#two-paths-one-namespace)
 
-[7. Decoupling topology from allocations [40](#decoupling-topology-from-allocations)](#decoupling-topology-from-allocations)
+[7.1.1 Bootstrap allocation pools vs NetBox-backed pools [34](#bootstrap-allocation-pools-vs-netbox-backed-pools)](#bootstrap-allocation-pools-vs-netbox-backed-pools)
 
-[7.1 Two paths, one namespace [40](#two-paths-one-namespace)](#two-paths-one-namespace)
+[7.2 Combined deployment patterns [34](#combined-deployment-patterns)](#combined-deployment-patterns)
 
-[7.1.1 Bootstrap allocation pools vs NetBox-backed pools [40](#bootstrap-allocation-pools-vs-netbox-backed-pools)](#bootstrap-allocation-pools-vs-netbox-backed-pools)
+[7.3 What is shared vs isolated [35](#what-is-shared-vs-isolated)](#what-is-shared-vs-isolated)
 
-[7.2 Combined deployment patterns [41](#combined-deployment-patterns)](#combined-deployment-patterns)
+[7.4 Recommended build order [35](#recommended-build-order)](#recommended-build-order)
 
-[7.3 What is shared vs isolated [42](#what-is-shared-vs-isolated)](#what-is-shared-vs-isolated)
+[8. Multi-namespace conventions and permissions [36](#multi-namespace-conventions-and-permissions)](#multi-namespace-conventions-and-permissions)
 
-[7.4 Recommended build order [42](#recommended-build-order)](#recommended-build-order)
+[8.1 Webhook URLs and tag naming [36](#webhook-urls-and-tag-naming)](#webhook-urls-and-tag-naming)
 
-[8. Multi-namespace conventions and permissions [42](#multi-namespace-conventions-and-permissions)](#multi-namespace-conventions-and-permissions)
+[8.2 API token and webhook secrets (lab convention) [36](#api-token-and-webhook-secrets-lab-convention)](#api-token-and-webhook-secrets-lab-convention)
 
-[8.1 Webhook URLs and tag naming [42](#webhook-urls-and-tag-naming)](#webhook-urls-and-tag-naming)
+[8.3 NetBox API permissions [37](#netbox-api-permissions)](#netbox-api-permissions)
 
-[8.2 API token and webhook secrets (lab convention) [43](#api-token-and-webhook-secrets-lab-convention)](#api-token-and-webhook-secrets-lab-convention)
+[Part IV — Operations and Constraints [37](#part-iv-operations-and-constraints)](#part-iv-operations-and-constraints)
 
-[8.3 NetBox API permissions [43](#netbox-api-permissions)](#netbox-api-permissions)
+[9. EDA transactions [37](#eda-transactions)](#eda-transactions)
 
-[Part IV — Operations and Constraints [44](#part-iv-operations-and-constraints)](#part-iv-operations-and-constraints)
+[9.1 Per-resource operation types [37](#per-resource-operation-types)](#per-resource-operation-types)
 
-[11. EDA transactions [44](#eda-transactions)](#eda-transactions)
+[9.2 Rule of thumb (NetBox-imported fabric) [38](#rule-of-thumb-netbox-imported-fabric)](#rule-of-thumb-netbox-imported-fabric)
 
-[11.1 Per-resource operation types [44](#per-resource-operation-types)](#per-resource-operation-types)
+[9.3 Transaction vs topology import [38](#transaction-vs-topology-import)](#transaction-vs-topology-import)
 
-[11.2 Rule of thumb (NetBox-imported fabric) [44](#rule-of-thumb-netbox-imported-fabric)](#rule-of-thumb-netbox-imported-fabric)
+[9.4 Execution and inspection [38](#execution-and-inspection)](#execution-and-inspection)
 
-[11.3 Transaction vs topology import [44](#transaction-vs-topology-import)](#transaction-vs-topology-import)
+[10. Constraints and anti-patterns [38](#constraints-and-anti-patterns)](#constraints-and-anti-patterns)
 
-[11.4 Execution and inspection [45](#execution-and-inspection)](#execution-and-inspection)
-
-[12. Constraints and anti-patterns [45](#constraints-and-anti-patterns)](#constraints-and-anti-patterns)
+[References [39](#references)](#references)
 
 ## Introduction — EDA NetBox App
 
@@ -135,6 +141,14 @@ The NetBox app exposes four primary custom resources (API group netbox.eda.nokia
 
 The app depends on the EDA Topology app (topologies.eda.nokia.com); it is installed from the EDA Store or via an AppInstaller CR.
 
+### DCIM - Topology integration model
+
+Two complementary paths exist:
+
+-   **Topology sync (EDA → NetBox):** With Instance.spec.sync.enabled: true, EDA pushes TopoNode and TopoLink objects to NetBox as Devices and Cables. Synced objects are tagged **EDAManaged**; spec.sync.region and spec.sync.tenant scope the mirrored Site.
+
+-   **ApplyTopology (NetBox → EDA):** Imports an existing NetBox Site into EDA for bootstrap when NetBox is the DCIM source of truth. Only devices whose NetBox Platform is srl become TopoNode objects; other devices may still appear as cable endpoints.
+
 ### IPAM integration model
 
 EDA continues to allocate from its own pool CRs (IPAllocationPool, SubnetAllocationPool, IndexAllocationPool, and related types). The NetBox app **creates those pools dynamically** from NetBox source objects and **posts allocated values back** to NetBox:
@@ -149,14 +163,6 @@ EDA continues to allocate from its own pool CRs (IPAllocationPool, SubnetAllocat
 
 When more than one NetBox prefix, ASN range, or VLAN group should feed the same pool, assign a **distinct tag** in NetBox and reference that tag in Allocation.spec.tags. The Allocation resource **name** becomes the EDA allocation pool name.
 
-### Topology integration model
-
-Two complementary paths exist:
-
--   **Topology sync (EDA → NetBox):** With Instance.spec.sync.enabled: true, EDA pushes TopoNode and TopoLink objects to NetBox as Devices and Cables. Synced objects are tagged **EDAManaged**; spec.sync.region and spec.sync.tenant scope the mirrored Site.
-
--   **ApplyTopology (NetBox → EDA):** Imports an existing NetBox Site into EDA for bootstrap when NetBox is the DCIM source of truth. Only devices whose NetBox Platform is srl become TopoNode objects; other devices may still appear as cable endpoints.
-
 ### Event-driven operation
 
 NetBox **Event Rules** trigger a **Webhook** on create, update, or delete of IPAM and DCIM objects EDA cares about (Prefixes, VLANs, ASNs, Devices, Cables, Sites, and related types). The webhook URL is namespace- and instance-scoped:
@@ -169,7 +175,7 @@ Note: Webhook connectivity is not mandatory. It is optional, if dynamic update o
 
 ### Relationship to this guide
 
-Product documentation covers installation, CR schemas, supported objects, and an end-to-end fabric example. **This document** applies that model to a multi-namespace lab: **Mode A** (EDA-managed topology sync) and **Mode B** (NetBox-managed import via ApplyTopology), plus allocation-only paths, webhook isolation, validation scripts, and constraints validated on clab-3-tier-leaf-spine-dcgw and fabric-dc2.
+Product documentation covers installation, CR schemas, supported objects, and an end-to-end fabric example. **This document** applies that model to a multi-namespace lab: **Mode A** (EDA-managed topology sync) and **Mode B** (NetBox-managed import via ApplyTopology), plus allocation-only paths, webhook isolation, validation scripts, and constraints validated on clab-3-tier-leaf-spine-dcgw and fabric-dc2 namespaces within EDA. Further details can be found in the associated git-repository.
 
 ## Executive summary
 
@@ -181,7 +187,7 @@ Nokia Event-Driven Automation (EDA) integrates with NetBox through the **EDA Net
 | **Mode B** — NetBox-managed   | NetBox → EDA via ApplyTopology                                   | false        | Planned / greenfield design; NetBox is DCIM source of truth            |
 | **Allocations** (either mode) | NetBox tagged pools → EDA pools → consumed values back to NetBox | n/a          | VLAN, ASN, system IP, management IP, ISL subnets (IPv4 /31, IPv6 /127) |
 
-**Design rule:** one EDA Kubernetes namespace = one fabric context = one Instance CR + one dedicated webhook URL.
+**Design rule:** one EDA namespace = one fabric context = one Instance CR + one dedicated webhook URL.
 
 This guide covers architecture, prerequisites, step-by-step procedures, Kubernetes manifests, NetBox Django scripts, and lab-validated constraints (including known gaps such as Mode B ASN allocation).
 
@@ -191,7 +197,7 @@ Allocations support both webhook and workflow models.
 
 | Convention          | Meaning                                                          |
 |---------------------|------------------------------------------------------------------|
-| **§N** / **§N.M**   | Section references (e.g. §5.3 = NetBox prerequisites for Mode B) |
+| **§N** / **§N.M**   | Section references (e.g. §5.2 = NetBox prerequisites for Mode B) |
 | **Mode A / Mode B** | EDA-managed sync vs NetBox-managed import — see §4 and §5        |
 | **EDAManaged**      | NetBox tag marking objects created or claimed by EDA             |
 | **kubectl**         | Run from **WSL** against the lab cluster unless noted            |
@@ -217,7 +223,7 @@ Allocations support both webhook and workflow models.
 
 **Out of scope:**
 
--   NetBox installation and Helm chart configuration (except ENFORCE_GLOBAL_UNIQUE)
+-   NetBox installation (Helm chart, database, ingress); the only NetBox setting this integration needs is ENFORCE_GLOBAL_UNIQUE=false
 
 -   Non-SRL platforms as TopoNode (may appear as cable endpoints only)
 
@@ -234,18 +240,18 @@ Allocations support both webhook and workflow models.
 
 ## 2. Definitions and acronyms
 
-| Term                        | Definition                                                                                                                                  |
-|-----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|
-| **DCIM**                    | NetBox Data Center Infrastructure Management (sites, devices, cables)                                                                       |
-| **IPAM**                    | NetBox IP Address Management (prefixes, VLANs, ASNs)                                                                                        |
-| **CR**                      | Kubernetes Custom Resource in EDA                                                                                                           |
-| **Instance**                | netbox.eda.nokia.com/v1alpha1 CR — connection to one NetBox server per EDA namespace                                                        |
-| **Allocation**              | CR mapping tagged NetBox IPAM objects to EDA allocation pools                                                                               |
-| **ApplyTopology**           | Workflow CR importing a NetBox site into EDA as TopoNode/TopoLink                                                                           |
-| **EDAManaged**              | Reserved NetBox tag (+ eda_managed field) marking objects EDA created or claimed — see §4.2                                                 |
-| **TopoNode**                | EDA topology CR representing an SR Linux node                                                                                               |
-| **Reconcile**               | ApplyTopology default — desired state = NetBox site only; orphans deleted                                                                   |
-| **Namespace instantiation** | CRs labeled eda.nokia.com/bootstrap=true form the template onboarding kit; EDA copies them into new namespaces via instantiation — see §3.2 |
+| Term                        | Definition                                                                                                                       |
+|-----------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| **DCIM**                    | NetBox Data Center Infrastructure Management (sites, devices, cables)                                                            |
+| **IPAM**                    | NetBox IP Address Management (prefixes, VLANs, ASNs)                                                                             |
+| **CR**                      | Kubernetes Custom Resource in EDA                                                                                                |
+| **Instance**                | netbox.eda.nokia.com/v1alpha1 CR — connection to one NetBox server per EDA namespace                                             |
+| **Allocation**              | CR mapping tagged NetBox IPAM objects to EDA allocation pools                                                                    |
+| **ApplyTopology**           | Workflow CR importing a NetBox site into EDA as TopoNode/TopoLink                                                                |
+| **EDAManaged**              | Reserved NetBox tag (+ eda_managed field) marking objects EDA created or claimed                                                 |
+| **TopoNode**                | EDA topology CR representing an SR Linux node                                                                                    |
+| **Reconcile**               | ApplyTopology default — desired state = NetBox site only; orphans deleted                                                        |
+| **Namespace instantiation** | CRs labeled eda.nokia.com/bootstrap=true form the template onboarding kit; EDA copies them into new namespaces via instantiation |
 
 # Part I — Foundation
 
@@ -260,11 +266,11 @@ Nokia EDA’s NetBox app exposes **two independent integration paths**:
 | **Topology / inventory** | DCIM          | Mode-dependent                                      | ApplyTopology + optional sync.enabled  |
 | **Allocations**          | IPAM          | NetBox pools → EDA → consumed values back to NetBox | Allocation + webhook / ApplyAllocation |
 
-| Concept           | Where it lives                      | Notes                                                                                                                                                                                       |
-|-------------------|-------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **K8s namespace** | EDA                                 | Created first; all CRs (Instance, TopoNode, Allocation, …) live here                                                                                                                        |
-| **NetBox site**   | NetBox                              | **Maps to the EDA namespace** — naming convention ties them together. Also appears as a **label** on imported TopoNodes (site: fabric-dc2); the label is metadata, not the namespace itself |
-| **Node profile**  | EDA NodeProfile + NetBox device tag | eda.nokia.com/node-profile=\<name\>                                                                                                                                                         |
+| Concept           | Where it lives                      | Notes                                                                                                                                                                                      |
+|-------------------|-------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **K8s namespace** | EDA                                 | Created first; all CRs (Instance, TopoNode, Allocation, …) live here                                                                                                                       |
+| **NetBox site**   | NetBox                              | **Maps to the EDA namespace** — naming convention ties them together. Also appears as a **label** on imported TopoNodes (site=fabric-dc2); the label is metadata, not the namespace itself |
+| **Node profile**  | EDA NodeProfile + NetBox device tag | eda.nokia.com/node-profile=\<name\>                                                                                                                                                        |
 
 **Site ↔ namespace mapping (lab convention):**
 
@@ -273,12 +279,14 @@ Nokia EDA’s NetBox app exposes **two independent integration paths**:
 | **Mode A** — EDA-managed    | EDA (Containerlab / live fabric) | e.g. clab-3-tier-leaf-spine-dcgw            | Created by **sync** — site name typically matches the namespace | Instance.spec.sync pushes DCIM; NetBox **Site** is populated from EDA with region / tenant from the Instance |
 | **Mode B** — NetBox-managed | NetBox (design source)           | Created to match site name, e.g. fabric-dc2 | You create **Site** fabric-dc2 in NetBox first                  | ApplyTopology.spec.siteName imports that site into the **same-named** EDA namespace                          |
 
-**Namespace is defined in EDA, not NetBox.** NetBox holds sites and devices; EDA decides target namespace via Instance placement and (Mode B) ApplyTopology in that namespace. The site=\<name\> device tag and TopoNode label mirror the NetBox site name for import filtering — they do not replace the K8s namespace.
+**Namespace is defined in EDA, not NetBox.** NetBox holds sites and devices; EDA decides target namespace via Instance placement and ApplyTopology (Mode B) in that namespace. The site=\<name\> device tag and TopoNode label mirror the NetBox site name for import filtering — they do not replace the K8s namespace.
 
-| Fabric                 | Example namespace        | Direction                                                        |
+| Mode                   | Example namespace        | Direction                                                        |
 |------------------------|--------------------------|------------------------------------------------------------------|
 | **A — EDA-managed**    | clab-srl-leaf-spine-dcgw | sync.enabled=true → NetBox DCIM mirror (EDAManaged)              |
 | **B — NetBox-managed** | fabric-dc2               | NetBox design source ← ApplyTopology import (sync.enabled=false) |
+
+### 
 
 ### 3.2 Namespace instantiation (onboarding prerequisites)
 
@@ -299,9 +307,9 @@ At **EDA installation**, the default user namespace (typically eda) is populated
       bootstrap:
         fromNamespace: eda           # copy onboarding kit from template namespace
 
-EDA creates the Kubernetes namespace fabric-dc2 and copies relevant onboarding CRs in one step. Use from Namespace: clab-3-tier-leaf-spine-dcgw (or another fabric) to inherit that namespace’s NodeProfile set instead of generic eda profiles if required.
+EDA creates the Kubernetes namespace fabric-dc2 and copies relevant onboarding CRs in one step. Use from Namespace: clab-3-tier-leaf-spine-dcgw (or another fabric) to inherit that namespace’s NodeProfile set instead of the more generic eda profiles if required. This is driven via label allocation to specific resources.
 
-| What gets copied (typical)                      | Purpose                                                                                       |
+| What typically gets copied                      | Purpose                                                                                       |
 |-------------------------------------------------|-----------------------------------------------------------------------------------------------|
 | **NodeProfile**                                 | OS/version, onboarding creds, mgmt pool — name goes in NetBox eda.nokia.com/node-profile= tag |
 | **NodeUser**                                    | Permanent management user; referenced by NodeProfile                                          |
@@ -335,15 +343,15 @@ Use --from-namespace clab-3-tier-leaf-spine-dcgw to match clab NodeProfile names
 
 1.  Note the **NodeProfile name** copied into the namespace (e.g. srl-leaf-spine-dcgw-srlinux-26.3.1) — set matching tag on NetBox devices.
 
-2.  **Patch NodeUser nodeSelector** if imported TopoNodes use labels different from the clab template (e.g. add eda.nokia.com/source=netbox).
+2.  **Patch NodeUser nodeSelector** if imported TopoNodes use labels different from the clab template (e.g. add eda.nokia.com/source=netbox). Only if the NodeUser does not have an empty nodeSelector or you already built the NodeUser with relevant netbox-labels.
 
 3.  **Patch Init nodeSelectors** similarly if nodes will onboard via ZTP.
 
-4.  Namespace instantiation does **not** create NetBox Instance / Allocation CRs — add those separately.
+4.  Namespace instantiation does **not** create NetBox specific CR’s (Instance / Allocation CRs) — add those separately.
 
 The eda.nokia.com/bootstrap=true label marks which CRs belong to the **onboarding CR’s**. Playground / clab namespaces receive the relevant CR’s from the eda-kpt-playground package at install time; new fabric namespaces get the same core set via **namespace instantiation** (EDA Namespace CR or edactl namespace bootstrap create).
 
-# Part II — Operating Models
+# Part II — Operating Modes
 
 ## 4. Mode A — EDA-managed DCIM sync
 
@@ -360,7 +368,7 @@ Mode A: EDA owns topology (TopoNode / TopoLink); NetBox mirrors DCIM with EDAMan
 
 | Setting                    | Value                                                      |
 |----------------------------|------------------------------------------------------------|
-| Instance.spec.sync.enabled | true                                                       |
+| Instance.spec.sync.enabled | True                                                       |
 | Instance.spec.sync.region  | NetBox Region for synced Site                              |
 | Instance.spec.sync.tenant  | NetBox Tenant for synced Site                              |
 | NetBox Site                | **Created/updated by EDA** — not your design source        |
@@ -375,7 +383,7 @@ Mode A: EDA owns topology (TopoNode / TopoLink); NetBox mirrors DCIM with EDAMan
 | (implicit) | Site                  | Named from namespace / sync config |
 | Interfaces | Device interfaces     | Created as part of device sync     |
 
-All pushed DCIM objects receive the **EDAManaged** tag and eda_managed custom field. **Only EDA should mutate EDAManaged DCIM objects.**
+All pushed DCIM objects receive the **EDAManaged** tag and EDA custom fields. **Only EDA should mutate EDAManaged DCIM objects.**
 
 **Typical lab example:** Containerlab fabric in clab-3-tier-leaf-spine-dcgw with sync.enabled: true, region region-1, tenant tenant-a. NetBox site mirrors the clab topology; devices carry EDAManaged.
 
@@ -396,7 +404,7 @@ Before enabling Instance.spec.sync.enabled, seed NetBox with the **DCIM catalog*
 | **Platform**                           | Recommended                                     | EDA sets platform on synced devices when mapped                                                                                                                                                                                                                 | Lab: srl, sros — see nb-fix-platforms.py post-sync                                  |
 | **DeviceRole**                         | Recommended                                     | EDA maps from **eda.nokia.com/role** label on each TopoNode (e.g. leaf, spine, dcgw, border-leaf) — these are **fabric role labels** on nodes in that namespace, not separate NetBox sites. Pre-create matching DeviceRole records so sync can set Device.role. |                                                                                     |
 | **Site / Device / Cable**              | **No** — created by sync                        | **EDA**                                                                                                                                                                                                                                                         | Tagged EDAManaged after push                                                        |
-| **EDAManaged tag + eda_managed field** | Pre-create tag optional; CF usually EDA-created | **EDA controller** (or you pre-create tag)                                                                                                                                                                                                                      | See §4.2 — must exist in NetBox before EDA can tag objects                          |
+| **EDAManaged tag + eda_managed field** | Pre-create tag optional; CF usually EDA-created | **EDA controller** (or you pre-create tag)                                                                                                                                                                                                                      | must exist in NetBox before EDA can tag objects                                     |
 | **API token**                          | Yes — DCIM write for Mode A                     | —                                                                                                                                                                                                                                                               | Same token can be reused across namespaces.                                         |
 | **Webhook**                            | Yes — one per EDA namespace                     | —                                                                                                                                                                                                                                                               | URL path includes namespace + Instance name.                                        |
 | **Event rule**                         | Yes — bound to that webhook                     | —                                                                                                                                                                                                                                                               | **Required, not optional.** A webhook without an event rule does nothing.           |
@@ -413,16 +421,11 @@ Disable or delete webhooks/event rules for namespaces you no longer use.
 | **Second**         | clab-srl-leaf-spine-dcgw    | region: region-2, tenant: tenant-b | Second Mode A fabric                                  |
 | **Planned import** | fabric-dc2                  | sync.enabled: false                | Mode B — assign Region/Tenant on NetBox Site manually |
 
-**eda_managed vs EDAManaged:** Two linked NetBox objects created on **first EDA reconcile** (sync or allocation):
+Ensure the **EDAManaged tag exists in NetBox** (pre-create or let EDA create on first reconcile with Extras Tag/CF permissions) before expecting tagged sync results.
 
-| Object          | Type                              | Purpose                                                                   |
-|-----------------|-----------------------------------|---------------------------------------------------------------------------|
-| **EDAManaged**  | NetBox **tag**                    | Visible in UI filters; marks “EDA owns this object”                       |
-| **eda_managed** | NetBox **custom field** (boolean) | Machine-readable flag on supported models; used by the NetBox app and API |
+**Roles (leaf / spine / dcgw):** In EDA, each TopoNode carries labels such as eda.nokia.com/role=leaf and site: \<fabric-name\>. The fabric is the EDA **namespace** (and synced NetBox **Site**). Role labels describe the node’s function **in that fabric**. The catalog seed pre-creates NetBox DeviceRole entries with the same names so Mode A sync can populate Device.role.
 
-Both are set together when EDA creates or claims an object. The catalog script only **checks** whether they exist — it does not create them. Ensure the **EDAManaged tag exists in NetBox** (pre-create or let EDA create on first reconcile with Extras Tag/CF permissions) before expecting tagged sync results.
-
-**Roles (leaf / spine / dcgw):** In EDA, each TopoNode carries labels such as eda.nokia.com/role=leaf and site: \<fabric-name\>. The fabric is the EDA **namespace** (and synced NetBox **Site**). Role labels describe the node’s function **in that fabric**. The catalog seed pre-creates NetBox DeviceRole entries with the same names so Mode A sync can populate Device.role. Mode B: you set equivalent tags on NetBox devices before ApplyTopology.
+Mode B: you set equivalent tags on NetBox devices before ApplyTopology.
 
 **Lab fabric platforms** (match TopoNode.spec.platform in clab namespaces):
 
@@ -474,7 +477,7 @@ Both are set together when EDA creates or claims an object. The catalog script o
 
 **Platform string matching:** DeviceType.model must match TopoNode.spec.platform exactly (case/spacing). Lab uses 7250 IXR-X1B and 7250 IXR-X3B. Check platforms with:  
 kubectl get toponodes -n \<ns\> -o jsonpath='{range .items\[\*\]}{.spec.platform}{"\\n"}{end}' \| sort -u  
-Interface port templates (QSFP-DD counts, etc.) are **not** created by the catalog script.
+Interface port templates (QSFP-DD counts, etc.) are **not** created by the catalog script. Scripts available via git repository.
 
 **Build order (Mode A):**
 
@@ -492,16 +495,16 @@ Interface port templates (QSFP-DD counts, etc.) are **not** created by the catal
 
 ### 4.2 The EDAManaged tag
 
-EDAManaged is a **reserved NetBox tag** (and matching **eda_managed boolean custom field**) used by the Nokia EDA NetBox app to mark objects EDA created or claimed.
+EDAManaged is a **reserved NetBox tag** (and matching **boolean custom fields**) used by the Nokia EDA NetBox app to mark objects EDA created or claimed.
 
 **Important:** The tag is **not** defined on the EDA Instance CR. It is a **NetBox object** that must exist (or be created by EDA) before EDA can tag synced or allocated objects. Mode B design devices must **not** carry this tag — see [§5](#X7a3a2779116ddf5ce4f6c09e6413eaa09d922d8).
 
-#### Who creates EDAManaged / eda_managed
+#### Who creates EDAManaged / eda managed CF’s
 
-| Object                       | Typical creator                                                               | When                                                     |
-|------------------------------|-------------------------------------------------------------------------------|----------------------------------------------------------|
-| **EDAManaged tag**           | EDA NetBox controller on **first reconcile**, **or you** pre-create in NetBox | Before/at first sync or first allocation write-back      |
-| **eda_managed custom field** | EDA controller on first reconcile (recommended)                               | Same — requires **Extras → Custom Field** API permission |
+| Object                | Typical creator                                                               | When                                                                      |
+|-----------------------|-------------------------------------------------------------------------------|---------------------------------------------------------------------------|
+| **EDAManaged tag**    | EDA NetBox controller on **first reconcile**, **or you** pre-create in NetBox | Before/at first sync or first allocation write-back                       |
+| **Eda custom fields** | EDA controller on first reconcile (recommended)                               | Same — requires **Extras → Custom Field** API permission (needs checking) |
 
 EDA needs **Extras → Tag** and **Extras → Custom Field** write permission on the API token to auto-create these. If reconcile fails to tag objects, verify permissions and that the EDAManaged tag exists in NetBox (**Customization → Tags**).
 
@@ -514,7 +517,6 @@ Objects NetBox should treat as **owned by EDA**:
 | Object                                          | When it gets EDAManaged                                                        |
 |-------------------------------------------------|--------------------------------------------------------------------------------|
 | **Site, Device, Cable, DeviceType** (sync path) | EDA pushes them via topology sync (sync.enabled: true)                         |
-| **IP Address, VLAN, ASN** (allocation path)     | EDA allocates a value from a pool and writes it back to NetBox                 |
 | **Your design site/devices** (Mode B)           | **Never** — you create these without EDAManaged; EDA imports them to TopoNodes |
 
 #### What “only EDA should mutate” means
@@ -544,11 +546,9 @@ After you configure NetBox webhook and verify sync. Site and devices are **creat
 
 Allocation pool tags and Allocation CRs are in [§6](#Xe8cc2cfa4755709b38f2594420d8a02e2b0e30e) (orthogonal to DCIM).
 
-**Region / Tenant convention:** baseline namespace clab-3-tier-leaf-spine-dcgw → region-1 / tenant-a. Each additional Mode A namespace increments: region-2 / tenant-b, region-3 / tenant-c, … in this implementation example.
+**Region / Tenant convention:** Lab baseline namespace clab-3-tier-leaf-spine-dcgw → region-1 / tenant-a. Each additional Mode A namespace increments: region-2 / tenant-b, region-3 / tenant-c, … in this implementation example.
 
 **Baseline fabric:** clab-3-tier-leaf-spine-dcgw. Apply **secrets YAML first**, then **Instance YAML** — same EDA namespace.
-
-**Multi-line YAML:** Each yaml code block below is a complete file with line breaks and indentation. If you see everything on one line, open the lab file directly: ../manifests/instance-clab-3-tier-leaf-spine-dcgw.yaml (or use the canvas — it now renders YAML in a \<pre\> block, not inline code).
 
 **Credentials** — edit stringData in the secrets file before apply:
 
@@ -608,7 +608,7 @@ Save each block below as the named file, edit stringData, then apply in order.
 
 **Pass:** reachable=true
 
-#### Mode A second fabric — clab-srl-leaf-spine-dcgw (region-2 / tenant-b)
+#### Mode A second fabric — clab-srl-leaf-spine-dcgw (region-2 / tenant-b) – just as reference for multi-tenant alignment with NB.
 
 ##### secrets-clab-srl-leaf-spine-dcgw.yaml
 
@@ -678,8 +678,6 @@ NetBox is the **design source** for DCIM. EDA imports topology via **ApplyTopolo
 
 **Lab example:** EDA namespace fabric-dc2, NetBox site fabric-dc2, sync.enabled: false.
 
-### 5.1 Overview
-
 | From (NetBox)                        | To (EDA)                      | Mechanism     |
 |--------------------------------------|-------------------------------|---------------|
 | DCIM site fabric-dc2 (no EDAManaged) | Namespace fabric-dc2          | ApplyTopology |
@@ -714,7 +712,7 @@ NetBox is the **design source** for DCIM. EDA imports topology via **ApplyTopolo
 | 5    | applytopology-fabric-dc2.yaml → TopoNodes / TopoLinks                                     |
 | 6    | (Optional) NetBox IPAM allocation pools + allocations-fabric-dc2.yaml                     |
 
-### 5.2 EDA namespace + instantiation (fabric-dc2)
+### 5.1 EDA namespace + instantiation (fabric-dc2)
 
 Create a **dedicated** fabric namespace before any NetBox Instance or ApplyTopology.
 
@@ -730,19 +728,11 @@ Create a **dedicated** fabric namespace before any NetBox Instance or ApplyTopol
       bootstrap:
         fromNamespace: eda           # or clab-3-tier-leaf-spine-dcgw | clab-srl-leaf-spine-dcgw
 
-Refer to Section 4 for further details on how to validate.
-
 | Onboarding object                               | Purpose for Mode B                                                            |
 |-------------------------------------------------|-------------------------------------------------------------------------------|
 | **NodeProfile**                                 | Name goes in NetBox device tag eda.nokia.com/node-profile=\<name\>            |
 | **NodeUser** / **Init**                         | Onboarding when TopoNodes are deployed (patch below for NetBox-sourced nodes) |
 | **IPAllocationPool** / **SubnetAllocationPool** | Mgmt and system IP pools for future node onboarding                           |
-
-Empty onboarding CR’s after apply? If the K8s namespace fabric-dc2 exists but kubectl get nodeprofiles -n fabric-dc2 returns nothing, namespace instantiation did not run — apply the EDA **Namespace CR** with spec.bootstrap.fromNamespace or run **edactl namespace bootstrap create**. If the namespace was created without the onboarding CR’s, delete it and recreate. Do not rely on a plain K8s namespace label alone.
-
-**EDA UI:** fabric-dc2 may not appear meaningfully until onboarding kit CRs exist. Refresh after apply or edactl.
-
-**You do not hand-create** NodeProfile, NodeUser, Init, or IP pools — namespace instantiation (EDA Namespace CR or edactl namespace bootstrap create) copies them from the template namespace. The only post-instantiation edit in this lab is the **NodeUser patch** below so imported TopoNodes match SSH bindings.
 
 **Patch NodeUser** so imported TopoNodes (label eda.nokia.com/source=netbox from your NetBox device tags) match SSH/credential bindings:
 
@@ -755,11 +745,11 @@ Empty onboarding CR’s after apply? If the K8s namespace fabric-dc2 exists but 
 
 **Pass:** kubectl get nodeprofiles -n fabric-dc2 returns at least one profile; NODE_PROFILE printed for use
 
-### 5.3 NetBox prerequisites (fabric-dc2)
+### 5.2 NetBox prerequisites (fabric-dc2)
 
-#### 5.3.1 Catalog objects (verify — usually already seeded)
+#### 5.2.1 Catalog objects (verify — usually already seeded)
 
-If you already ran nb-seed-eda-catalog.py, these already exist in NetBox. Confirm in the UI; re-run the seed script if anything is missing.
+If you already ran nb-seed-eda-catalog.py, these already exist in NetBox. Confirm in the UI; re-run the seed script if anything is missing or you need to add new items.
 
 | Object       | NetBox UI path           | Lab value                 | Needed for Mode B                  |
 |--------------|--------------------------|---------------------------|------------------------------------|
@@ -781,7 +771,7 @@ If you already ran nb-seed-eda-catalog.py, these already exist in NetBox. Confir
 
 Copy the token once — it goes in secrets-fabric-dc2.yaml → apiToken.
 
-#### 5.3.2 Create region, tenant, and site in NetBox
+#### 5.2.2 Create region, tenant, and site in NetBox
 
 **NetBox UI only** — Tenancy and DCIM menus.
 
@@ -825,7 +815,7 @@ Copy the token once — it goes in secrets-fabric-dc2.yaml → apiToken.
 
 Site name must match ApplyTopology.spec.siteName (fabric-dc2). The device script can get_or_create the site if you skip step 3 — creating it here assigns region/tenant in the UI first.
 
-#### 5.3.3 Create webhook in NetBox
+#### 5.2.3 Create webhook in NetBox
 
 **NetBox UI only** — **Customization → Webhooks → Add** (NetBox 4.x: **Operations → Integrations → Webhooks → Add**)
 
@@ -850,7 +840,7 @@ URL must be reachable **from the NetBox pod** (not browser localhost):
 
 Do **not** reuse the clab webhook URL or signing secret — each EDA namespace needs its own webhook + secret.
 
-#### 5.3.4 Create event rule in NetBox
+#### 5.2.4 Create event rule in NetBox
 
 **NetBox UI only** — **Customization → Event Rules → Add** (NetBox 4.x: **Operations → Integrations → Event Rules → Add**)
 
@@ -880,23 +870,23 @@ Do **not** reuse the clab webhook URL or signing secret — each EDA namespace n
 
 For the full lab (topology + optional allocations), enable **all** types — same object set as Mode A; only the webhook URL targets fabric-dc2.
 
-#### 5.3.5 Not needed until later
+#### 5.2.5 Not needed until later
 
-| Item                              | When                                                                      |
-|-----------------------------------|---------------------------------------------------------------------------|
-| Devices, interfaces, cables       | [§5.5](#Xce1083a30d7f944425b8b6bdce7076a55b765fa) — nb-test-fabric-dc2.py |
-| VLAN groups, prefixes, ASN ranges | [§5.7](#X69c0b58b636e24406d804afba17593991378e2a) — optional              |
-| EDAManaged on site or devices     | **Never** on Mode B design objects                                        |
+| Item                              | When                               |
+|-----------------------------------|------------------------------------|
+| Devices, interfaces, cables       | nb-test-fabric-dc2.py              |
+| VLAN groups, prefixes, ASN ranges | optional                           |
+| EDAManaged on site or devices     | **Never** on Mode B design objects |
 
-#### 5.3.6 Global setting (one-time, NetBox UI or admin)
+#### 5.2.6 Global setting (one-time, NetBox UI or admin)
 
-Confirm ENFORCE_GLOBAL_UNIQUE=false ([§8.3](#Xc20f2c56567c9b18f710108fbbe1fa5aa27d0d8)).
+Confirm ENFORCE_GLOBAL_UNIQUE=false.
 
 **Pass:** Site fabric-dc2 visible in NetBox UI (no EDAManaged); webhook + event rule saved; webhook **Secret** and API token copied ready for [§5.4](#Xf05e880280a4a5b3338c39b84f7bb0b25917f82).
 
-### 5.4 Secrets + Instance CR (fabric-dc2)
+### 5.3 Secrets + Instance CR (fabric-dc2)
 
-#### 5.4.1 secrets-fabric-dc2.yaml
+#### 5.3.1 secrets-fabric-dc2.yaml
 
     # Mode B — edit stringData from NetBox UI before apply.
     apiVersion: v1
@@ -917,7 +907,7 @@ Confirm ENFORCE_GLOBAL_UNIQUE=false ([§8.3](#Xc20f2c56567c9b18f710108fbbe1fa5aa
     stringData:
       apiToken: paste-netbox-api-token
 
-#### 5.4.2 instance-fabric-dc2.yaml
+#### 5.3.2 instance-fabric-dc2.yaml
 
     # Mode B — NetBox design source. sync.enabled: false
     apiVersion: netbox.eda.nokia.com/v1alpha1
@@ -935,49 +925,20 @@ Confirm ENFORCE_GLOBAL_UNIQUE=false ([§8.3](#Xc20f2c56567c9b18f710108fbbe1fa5aa
     kubectl apply -f instance-fabric-dc2.yaml
     kubectl get instance.netbox.eda.nokia.com netbox -n fabric-dc2 -o jsonpath='reachable={.status.reachable}{"\n"}'
 
-### 5.5 NetBox DCIM modelling — devices, interfaces, cables
+### 5.4 NetBox DCIM modelling — devices, interfaces, cables
 
-After [§5.4](#Xf05e880280a4a5b3338c39b84f7bb0b25917f82) (Instance reachable). Creates leaf/spine devices **in NetBox** — via the script below (run inside NetBox pod) or manually in the NetBox UI.
+After [§5.3](#Xf05e880280a4a5b3338c39b84f7bb0b25917f82) (Instance reachable). Creates leaf/spine devices **in NetBox** — via the script below (run inside NetBox pod) or manually in the NetBox UI.
 
-#### 5.5.1 Topology summary
+#### 5.4.1 Topology summary
 
-Django ORM script executed **inside the NetBox pod** (manage.py shell). Creates devices, interfaces, and cables at site fabric-dc2. Site may already exist from [§5.3.2](#Xc84e6688adb5391ee329353f3d96b874913c13a); script uses get_or_create.
+Django ORM script executed **inside the NetBox pod** (manage.py shell). Creates devices, interfaces, and cables at site fabric-dc2. Site may already exist from [§5.3.2](#Xc84e6688adb5391ee329353f3d96b874913c13a); script uses get_or_create. Script available in git repository.
 
 | Role  | Names                      | Device type  | Uplinks                                            |
 |-------|----------------------------|--------------|----------------------------------------------------|
 | Leaf  | leaf-dc2-01 … leaf-dc2-04  | 7220 IXR-D3L | ethernet-1/49 → spine-01, ethernet-1/50 → spine-02 |
 | Spine | spine-dc2-01, spine-dc2-02 | 7220 IXR-D4  | ethernet-1/1–ethernet-1/4 (one per leaf link)      |
 
-#### 5.5.2 Prepare the script
-
-Copy scripts/nb-test-fabric-dc2.py to manifests/nb-test-fabric-dc2.py and **edit NODE_PROFILE** to match [§5.2](#X56a525b261cd0ea68478e0fd4da6a41a11274cf) NodeProfile from namespace instantiation:
-
-    kubectl get nodeprofiles -n fabric-dc2 -o jsonpath='{.items[0].metadata.name}{"\n"}'
-
-| Setting      | Requirement                                                                                                                                                                                                                                 |
-|--------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| SITE         | fabric-dc2 — must match ApplyTopology.spec.siteName                                                                                                                                                                                         |
-| NODE_PROFILE | Must match a NodeProfile in fabric-dc2                                                                                                                                                                                                      |
-| Device tags  | eda.nokia.com/node-profile=…, eda.nokia.com/role=leaf or spine, site=fabric-dc2 — **do not** tag devices with eda.nokia.com/source=netbox (EDA sets that label on TopoNodes; putting it on NetBox device tags causes ApplyTopology to fail) |
-| Cable tag    | eda.nokia.com/role=interSwitch on each ISL                                                                                                                                                                                                  |
-| Cable type   | **Optional** — leave unset (same as Mode A sync). Not used by ApplyTopology; NetBox bookkeeping only                                                                                                                                        |
-
-Script is idempotent — safe to re-run.
-
-#### 5.5.3 Run the script
-
-After saving the script to disk, copy into the NetBox pod and execute:
-
-    # From WSL — lab file path
-    SCRIPT=../manifests/nb-test-fabric-dc2.py
-
-    POD=$(kubectl get pod -n netbox -l app.kubernetes.io/name=netbox -o jsonpath='{.items[0].metadata.name}')
-    kubectl cp "$SCRIPT" "netbox/${POD}:/tmp/nb-test-fabric-dc2.py"
-    kubectl exec -n netbox "$POD" -- python /opt/netbox/netbox/manage.py shell -c "exec(open('/tmp/nb-test-fabric-dc2.py').read())"
-
-**Pass:** NetBox UI → DCIM → Devices at site fabric-dc2 shows **6 devices**, **8 cables**; no EDAManaged tag on site or devices.
-
-#### 5.5.4 Manual alternative (NetBox UI)
+#### 5.4.2 Manual alternative (NetBox UI)
 
 Create each device in **DCIM → Devices** with platform srl, device types above, and tags:
 
@@ -989,7 +950,7 @@ Add interfaces and cables in DCIM. Optional cable tag: eda.nokia.com/role=interS
 
 **Do not** add eda.nokia.com/source=netbox to device tags. EDA applies that label internally on imported TopoNodes; NetBox device tags with that key are copied to TopoNode labels and rejected by the CE.
 
-### 5.6 ApplyTopology CR
+### 5.5 ApplyTopology CR
 
 **File: applytopology-fabric-dc2.yaml**
 
@@ -1008,304 +969,9 @@ Add interfaces and cables in DCIM. Optional cable tag: eda.nokia.com/role=interS
 
 **Pass:** TopoNode / TopoLink count matches NetBox site (6 TopoNodes, 8 TopoLinks for this lab).
 
-Hands-on walkthrough and reference detail are in the full technical documentation.
+Hands-on walkthrough and references are in the full technical documentation/git repository.
 
-### 5.7 NetBox allocation pools (fabric-dc2)
-
-**Optional step 6** in [§5.1](#Xc719e00ed9ce0b2b0576dca6ea38b4056582a83). Requires [§5.4](#Xf05e880280a4a5b3338c39b84f7bb0b25917f82) (Instance reachable) and IPAM object types enabled in the event rule ([§5.3.4](#Xd225876499b0239d3068f1e1f611ffb5c625337)). Allocation pool tags can be pre-created — see below.
-
-Create tagged IPAM objects in NetBox **before** kubectl apply -f allocations-fabric-dc2.yaml. Tags are **plain strings** (not key=value device tags). Theory and CR matrix: [§6.3](#X3737d0a92ed47a6e83651f30fc15c4019ff0dd0).
-
-If you create the pools through the NetBox UI, create the tags first — the script below creates them for you:
-
-1.  **Customization → Tags → Add** (repeat for each)
-
-| Tag name                | Used on            |
-|-------------------------|--------------------|
-| eda-fabric-dc2-vlan     | VLAN Group         |
-| eda-fabric-dc2-asn      | ASN Range          |
-| eda-fabric-dc2-systemip | Prefix (Active)    |
-| eda-fabric-dc2-mgmt     | Prefix (Active)    |
-| eda-fabric-dc2-isl      | Prefix (Container) |
-
-#### 5.7.0 Create all pools at once (script)
-
-**File:** nb-test-allocation-pools-fabric-dc2.py. Creates all five NetBox objects + tags in one run:
-
-    SCRIPT=../scripts/nb-test-allocation-pools-fabric-dc2.py
-    POD=$(kubectl get pod -n netbox -l app.kubernetes.io/name=netbox -o jsonpath='{.items[0].metadata.name}')
-    kubectl cp "$SCRIPT" "netbox/${POD}:/tmp/nb-test-allocation-pools-fabric-dc2.py"
-    kubectl exec -n netbox "$POD" -- python /opt/netbox/netbox/manage.py shell -c "exec(open('/tmp/nb-test-allocation-pools-fabric-dc2.py').read())"
-
-Then apply EDA side ([§5.7.6](#X52bda211813cfe30511d3cac016630961c9e65d)).
-
-#### 5.7.1 VLAN pool (type: vlan)
-
-**NetBox UI — create VLAN Group**
-
-1.  **IPAM → VLAN Groups → Add**
-
-2.  **Name:** fabric-dc2-vlans
-
-3.  **Slug:** fabric-dc2-vlans
-
-4.  **Minimum VID / Maximum VID:** 100 / 199 (or add VID ranges after create)
-
-5.  **Tags:** eda-fabric-dc2-vlan (create the tag if missing)
-
-6.  **Create**
-
-**EDA Allocation CR** (nb-fabric-dc2-vlan-pool → IndexAllocationPool):
-
-    apiVersion: netbox.eda.nokia.com/v1alpha1
-    kind: Allocation
-    metadata:
-      name: nb-fabric-dc2-vlan-pool
-      namespace: fabric-dc2
-    spec:
-      enabled: true
-      instance: netbox
-      tags: [eda-fabric-dc2-vlan]
-      type: vlan
-
-#### 5.7.2 ASN pool (type: asn)
-
-**NetBox UI — create ASN Range**
-
-1.  **IPAM → ASN Ranges → Add**
-
-2.  **Name:** fabric-dc2-asns
-
-3.  **RIR:** Private
-
-4.  **Start ASN / End ASN:** 4200000000 / 4200000999
-
-5.  **Tags:** eda-fabric-dc2-asn
-
-6.  **Create**
-
-**EDA Allocation CR** (nb-fabric-dc2-asn-pool → IndexAllocationPool):
-
-    apiVersion: netbox.eda.nokia.com/v1alpha1
-    kind: Allocation
-    metadata:
-      name: nb-fabric-dc2-asn-pool
-      namespace: fabric-dc2
-    spec:
-      enabled: true
-      instance: netbox
-      tags: [eda-fabric-dc2-asn]
-      type: asn
-
-#### 5.7.3 System IP pool (type: ip-address)
-
-**NetBox UI — create Prefix (Active)**
-
-1.  **IPAM → Prefixes → Add**
-
-2.  **Prefix:** 10.0.1.0/24
-
-3.  **Status:** **Active** (required — not Container)
-
-4.  **Tags:** eda-fabric-dc2-systemip
-
-5.  **Create**
-
-**EDA Allocation CR** (nb-fabric-dc2-systemip → IPAllocationPool):
-
-    apiVersion: netbox.eda.nokia.com/v1alpha1
-    kind: Allocation
-    metadata:
-      name: nb-fabric-dc2-systemip
-      namespace: fabric-dc2
-    spec:
-      enabled: true
-      instance: netbox
-      tags: [eda-fabric-dc2-systemip]
-      type: ip-address
-
-#### 5.7.4 Management IP pool (type: ip-in-subnet)
-
-**NetBox UI — create Prefix (Active)**
-
-1.  **IPAM → Prefixes → Add**
-
-2.  **Prefix:** 192.168.100.0/24
-
-3.  **Status:** **Active**
-
-4.  **Tags:** eda-fabric-dc2-mgmt
-
-5.  **Create**
-
-**EDA Allocation CR** (nb-fabric-dc2-mgmt → IPInSubnetAllocationPool):
-
-    apiVersion: netbox.eda.nokia.com/v1alpha1
-    kind: Allocation
-    metadata:
-      name: nb-fabric-dc2-mgmt
-      namespace: fabric-dc2
-    spec:
-      enabled: true
-      instance: netbox
-      tags: [eda-fabric-dc2-mgmt]
-      type: ip-in-subnet
-
-#### 5.7.5 ISL subnet pool (type: subnet)
-
-Point-to-point ISL links use **/31 subnets** (RFC 3021). Set spec.subnetLength: 31 on the Allocation CR.
-
-**NetBox UI — create Prefix (Container)**
-
-1.  **IPAM → Prefixes → Add**
-
-2.  **Prefix:** 10.255.0.0/16
-
-3.  **Status:** **Container** (required for subnet allocation)
-
-4.  **Tags:** eda-fabric-dc2-isl
-
-5.  **Create**
-
-**EDA Allocation CR** (nb-fabric-dc2-isl → SubnetAllocationPool):
-
-    apiVersion: netbox.eda.nokia.com/v1alpha1
-    kind: Allocation
-    metadata:
-      name: nb-fabric-dc2-isl
-      namespace: fabric-dc2
-    spec:
-      enabled: true
-      instance: netbox
-      tags: [eda-fabric-dc2-isl]
-      type: subnet
-      subnetLength: 31
-
-#### 5.7.5a Mode A lab example — IPv6 ISL (clab-3-tier-leaf-spine-dcgw)
-
-Use a **separate** IPv6 container from system/loopback space. In this lab, **do not** use 121::/… for ISL — reserve that range for **system IP** (type: ip-address). ISL IPv6 uses **2005::/64** as the NetBox container; EDA carves **/127** subnets for point-to-point ISLs.
-
-| Item                   | Lab value                                                    |
-|------------------------|--------------------------------------------------------------|
-| **NetBox prefix**      | 2005::/64                                                    |
-| **Status**             | **Container**                                                |
-| **Tag**                | eda-clab3tier-isl-ipv6                                       |
-| **Allocation CR name** | eda-isl-ipv6 (matches Fabric.spec.interSwitchLinks.poolIPv6) |
-| **spec.type**          | subnet                                                       |
-| **spec.subnetLength**  | 127                                                          |
-| **EDA pool CRD**       | SubnetAllocationPool                                         |
-
-**NetBox — script or UI**
-
-    # All clab3tier pools (v4 + v6 ISL): scripts/nb-test-allocation-pools-clab3tier.py
-    # IPv6 ISL only: scripts/nb-add-clab3tier-isl-ipv6-only.py
-    POD=$(kubectl get pod -n netbox -l app.kubernetes.io/name=netbox -o jsonpath='{.items[0].metadata.name}')
-    kubectl cp scripts/nb-add-clab3tier-isl-ipv6-only.py "netbox/${POD}:/tmp/nb-add-isl-v6.py"
-    kubectl exec -n netbox "$POD" -- /opt/netbox/venv/bin/python /tmp/nb-add-isl-v6.py
-
-**EDA — excerpt from manifests/allocations-clab-3-tier-leaf-spine-dcgw.yaml:**
-
-    apiVersion: netbox.eda.nokia.com/v1alpha1
-    kind: Allocation
-    metadata:
-      name: eda-isl-ipv6
-      namespace: clab-3-tier-leaf-spine-dcgw
-    spec:
-      enabled: true
-      instance: netbox
-      tags: [eda-clab3tier-isl-ipv6]
-      type: subnet
-      subnetLength: 127
-
-**Verify**
-
-    kubectl get allocation eda-isl-ipv6 -n clab-3-tier-leaf-spine-dcgw \
-      -o jsonpath='matched={.status.matchedPrefixes}{"\n"}'
-    kubectl get subnetallocationpool eda-isl-ipv6 -n clab-3-tier-leaf-spine-dcgw
-
-Child /127 prefixes appear in NetBox **after** the fabric consumes the pool (underlay ISL provisioning), not when the container prefix is first matched.
-
-**Bootstrap vs NetBox:** Namespace instantiation may already create a SubnetAllocationPool named eda-isl-ipv6 **without** a NetBox Allocation CR. That pool is **onboarding kit**, not IPAM-backed. To sync with NetBox, create the tagged prefix above, apply the Allocation CR, confirm status.matchedPrefixes, then remove a duplicate bootstrap pool only if the controller does not adopt it — see [§7.1.1](#Xc9e009074bdeda6879241181d8a78c1dd75f6ec).
-
-#### 5.7.6 Apply all Allocation CRs
-
-**File: allocations-fabric-dc2.yaml** (multi-document — combines §5.7.1–§5.7.5):
-
-    apiVersion: netbox.eda.nokia.com/v1alpha1
-    kind: Allocation
-    metadata:
-      name: nb-fabric-dc2-systemip
-      namespace: fabric-dc2
-    spec:
-      enabled: true
-      instance: netbox
-      tags: [eda-fabric-dc2-systemip]
-      type: ip-address
-    ---
-    apiVersion: netbox.eda.nokia.com/v1alpha1
-    kind: Allocation
-    metadata:
-      name: nb-fabric-dc2-mgmt
-      namespace: fabric-dc2
-    spec:
-      enabled: true
-      instance: netbox
-      tags: [eda-fabric-dc2-mgmt]
-      type: ip-in-subnet
-    ---
-    apiVersion: netbox.eda.nokia.com/v1alpha1
-    kind: Allocation
-    metadata:
-      name: nb-fabric-dc2-isl
-      namespace: fabric-dc2
-    spec:
-      enabled: true
-      instance: netbox
-      tags: [eda-fabric-dc2-isl]
-      type: subnet
-      subnetLength: 31
-    ---
-    apiVersion: netbox.eda.nokia.com/v1alpha1
-    kind: Allocation
-    metadata:
-      name: nb-fabric-dc2-asn-pool
-      namespace: fabric-dc2
-    spec:
-      enabled: true
-      instance: netbox
-      tags: [eda-fabric-dc2-asn]
-      type: asn
-    ---
-    apiVersion: netbox.eda.nokia.com/v1alpha1
-    kind: Allocation
-    metadata:
-      name: nb-fabric-dc2-vlan-pool
-      namespace: fabric-dc2
-    spec:
-      enabled: true
-      instance: netbox
-      tags: [eda-fabric-dc2-vlan]
-      type: vlan
-    kubectl apply -f allocations-fabric-dc2.yaml
-    kubectl get allocation -n fabric-dc2
-
-#### 5.7.7 Verify all pools
-
-    kubectl get allocation -n fabric-dc2
-    kubectl get allocation nb-fabric-dc2-vlan-pool -n fabric-dc2 -o jsonpath='matched={.status.matchedPrefixes}{"\n"}'
-    kubectl get indexallocationpools,ipallocationpools,subnetallocationpools,ipinsubnetallocationpools -n fabric-dc2
-
-| Allocation CR           | EDA pool kind            | Pass                            |
-|-------------------------|--------------------------|---------------------------------|
-| nb-fabric-dc2-vlan-pool | IndexAllocationPool      | status shows matched VLAN group |
-| nb-fabric-dc2-asn-pool  | IndexAllocationPool      | matched ASN range               |
-| nb-fabric-dc2-systemip  | IPAllocationPool         | matched Active prefix           |
-| nb-fabric-dc2-mgmt      | IPInSubnetAllocationPool | matched Active prefix           |
-| nb-fabric-dc2-isl       | SubnetAllocationPool     | matched Container prefix        |
-
-The hands-on walkthrough is in the full technical documentation.
-
-### 5.8 Mode A vs Mode B (summary)
+### 5.6 Mode A vs Mode B (summary)
 
 |                      | Mode A                   | Mode B                          |
 |----------------------|--------------------------|---------------------------------|
@@ -1384,12 +1050,12 @@ Instance and Allocation **must** live in the **same namespace**. The Allocation 
         region: region-1              # NetBox Region for synced Site (sync only)
         tenant: tenant-a              # NetBox Tenant for synced Site (sync only)
 
-| Field                     | Affects topology?                      | Affects allocations?                           |
-|---------------------------|----------------------------------------|------------------------------------------------|
-| sync.enabled              | **Yes** — EDA→NetBox device/cable push | **No**                                         |
-| sync.region / sync.tenant | Yes (synced Site metadata)             | No                                             |
-| disableWebhook            | No (sync is controller-driven)         | **Yes** — use ApplyAllocation manually if true |
-| url, apiToken, TLS        | Both                                   | Both                                           |
+| Field                     | Affects topology?                                                                                           | Affects allocations?                           |
+|---------------------------|-------------------------------------------------------------------------------------------------------------|------------------------------------------------|
+| sync.enabled              | **Yes** — EDA→NetBox device/cable push                                                                      | **No**                                         |
+| sync.region / sync.tenant | Yes (synced Site metadata)                                                                                  | No                                             |
+| disableWebhook            | Yes (Mode A) – device push is controller driven, but interace and cable sync needs the webhook + event rule | **Yes** — use ApplyAllocation manually if true |
+| url, apiToken, TLS        | Both                                                                                                        | Both                                           |
 
 **Status fields:** reachable, errorReason, lastChecked
 
@@ -1434,7 +1100,7 @@ VLAN and prefix-based pools (vlan, ip-address, ip-in-subnet, subnet) reconcile f
 | A — EDA-managed (clab-3-tier-leaf-spine-dcgw) | true         | Matched         | **Matched**                       |
 | B — NetBox-managed (fabric-dc2)               | false        | Matched         | **Blocked** (Under investigation) |
 
-Sharing the same Instance name (netbox) across namespaces — each namespace resolves spec.instance locally and overlapping ASN numeric ranges is suppotred — matching is by **tag**.
+Sharing the same Instance name (netbox) across namespaces — each namespace resolves spec.instance locally and overlapping ASN numeric ranges is supported — matching is by **tag**.
 
 In this release combination - Mode B lab: expect **4/5** Allocation CRs matched; use Mode A namespace for full ASN pool testing until Nokia documents a Mode B workaround.
 
@@ -1519,7 +1185,7 @@ IPAM objects are **not scoped to a DCIM site**. Separation across namespaces is 
 
 #### Trigger and verify
 
-**File: applyallocation-refresh-fabric-dc2.yaml** (on-demand reconcile — repeat per pool name)
+**File: applyallocationrefresh-fabric-dc2.yaml** (on-demand reconcile — repeat per pool name)
 
     apiVersion: netbox.eda.nokia.com/v1alpha1
     kind: ApplyAllocation
@@ -1545,11 +1211,11 @@ IPAM objects are **not scoped to a DCIM site**. Separation across namespaces is 
 
 **Canonical walkthrough:** This subsection is a short index; full NetBox UI steps, per-pool Allocation YAML, and allocations-fabric-dc2.yaml are in the Git Repo.
 
-Create tagged IPAM objects in NetBox **before** kubectl apply -f allocations-fabric-dc2.yaml. Tags are **plain strings** (not key=value device tags).
+Create tagged IPAM objects in NetBox **before** kubectl apply -f allocations-fabric-dc2.yaml (NB allocations CR). Tags are **plain strings** (not key=value device tags).
 
 #### 6.4.0 Run all pools (script)
 
-**File:** nb-test-allocation-pools-fabric-dc2.py. Creates all five objects + tags in one run:
+**File:** nb-test-allocation-pools-fabric-dc2.py. Creates all five objects + tags in one run: Available via git repository.
 
     SCRIPT=../scripts/nb-test-allocation-pools-fabric-dc2.py
     POD=$(kubectl get pod -n netbox -l app.kubernetes.io/name=netbox -o jsonpath='{.items[0].metadata.name}')
@@ -1682,7 +1348,7 @@ Two different mechanisms can create **SubnetAllocationPool** (and other pool kin
 | **Namespace bootstrap** | Copied from template namespace (eda.nokia.com/bootstrap: "true") | **No**                                | **No**                       |
 | **NetBox app**          | Allocation reconciles tagged IPAM → pool                         | **Yes**                               | **Yes** (parent pool object) |
 
-Webhooks do **not** create pool definitions; they refresh reconciliation after IPAM changes. The **Allocation CR** is the integration object for NetBox-backed pools.
+Webhooks do **not** create pool definitions; they refresh reconciliation after IPAM changes. The Netbox **Allocation CR** is the integration object for NetBox-backed pools.
 
 **Lab migration (e.g. IPv6 ISL eda-isl-ipv6):**
 
@@ -1763,10 +1429,10 @@ Examples (webhook — use address **reachable from NetBox pod**, not browser loc
     https://<EDA-WEBHOOK-HOST>:9443/core/httpproxy/v1/netbox/webhook/clab-srl-leaf-spine-dcgw/netbox
     https://<EDA-WEBHOOK-HOST>:9443/core/httpproxy/v1/netbox/webhook/fabric-dc2/netbox
 
-| Access from                                    | EDA URL                                                                                                                      |
-|------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
-| **Your browser** (UI, EDA Explorer)            | https://localhost:9443                                                                                                       |
-| **NetBox webhook** (HTTP call from NetBox pod) | https://eda-api.eda-system.svc.cluster.local:443/... or LB IP from kubectl get svc eda-api -n eda-system — **not** localhost |
+| Access from                                    | EDA URL                                                                                                  |
+|------------------------------------------------|----------------------------------------------------------------------------------------------------------|
+| **Your browser** (UI, EDA Explorer)            | https://localhost:9443                                                                                   |
+| **NetBox webhook** (HTTP call from NetBox pod) | https://eda-api.eda-system.svc.cluster.local:443/... or LB IP from kubectl get svc eda-api -n eda-system |
 
 **Suggested tag naming** to avoid cross-namespace pool collisions (fabric-dc2 lab):
 
